@@ -1,0 +1,5 @@
+{
+  "sample_id": "update-no-change",
+  "expected_valid": true,
+  "fixture": "tests executable mutation contract"
+}

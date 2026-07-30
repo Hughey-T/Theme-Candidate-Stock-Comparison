@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "ranking_type": {
+      "enum": [
+        "company_quality",
+        "tactical",
+        "structural",
+        "risk_adjusted",
+        "portfolio_fit"
+      ]
+    },
+    "ordered_candidates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "comparability": {
+      "enum": [
+        "comparable",
+        "partially_comparable",
+        "not_comparable",
+        "reference_only"
+      ]
+    }
+  },
+  "required": [
+    "ranking_type",
+    "ordered_candidates",
+    "comparability"
+  ]
+}

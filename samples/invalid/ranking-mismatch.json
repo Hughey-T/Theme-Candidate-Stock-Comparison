@@ -1,0 +1,5 @@
+{
+  "sample_id": "ranking-mismatch",
+  "expected_valid": false,
+  "fixture": "tests executable mutation contract"
+}

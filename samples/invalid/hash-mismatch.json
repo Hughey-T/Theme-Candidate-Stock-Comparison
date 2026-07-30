@@ -1,0 +1,5 @@
+{
+  "sample_id": "hash-mismatch",
+  "expected_valid": false,
+  "fixture": "tests executable mutation contract"
+}

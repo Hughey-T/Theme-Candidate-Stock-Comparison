@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_set_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_cutoff_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "inventory": {
+      "type": "array",
+      "minItems": 1
+    },
+    "canonical_sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "verification_status": {
+      "enum": [
+        "not_generated",
+        "generated_not_persisted",
+        "persisted_pending_verification",
+        "integrity_verified",
+        "failed_terminal"
+      ]
+    }
+  },
+  "required": [
+    "schema_version",
+    "generation_id",
+    "candidate_set_id",
+    "source_cutoff_at",
+    "created_at",
+    "inventory",
+    "canonical_sha256",
+    "verification_status"
+  ]
+}

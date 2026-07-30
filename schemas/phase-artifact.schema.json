@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "phase": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_set_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "source_cutoff_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "facts": {
+      "type": "array"
+    },
+    "company_claims": {
+      "type": "array"
+    },
+    "external_estimates": {
+      "type": "array"
+    },
+    "judgments": {
+      "type": "array"
+    },
+    "payload": {
+      "type": "object"
+    }
+  },
+  "required": [
+    "phase",
+    "generation_id",
+    "candidate_set_id",
+    "source_cutoff_at",
+    "facts",
+    "company_claims",
+    "external_estimates",
+    "judgments",
+    "payload"
+  ]
+}

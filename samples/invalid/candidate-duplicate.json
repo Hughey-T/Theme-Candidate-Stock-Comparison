@@ -1,0 +1,5 @@
+{
+  "sample_id": "candidate-duplicate",
+  "expected_valid": false,
+  "fixture": "tests executable mutation contract"
+}

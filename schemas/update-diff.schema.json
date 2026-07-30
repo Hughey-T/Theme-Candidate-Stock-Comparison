@@ -1,0 +1,50 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "old_generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "new_generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "field": {
+            "type": "string",
+            "minLength": 1
+          },
+          "before": {},
+          "after": {},
+          "change": {
+            "const": "changed"
+          }
+        },
+        "required": [
+          "field",
+          "before",
+          "after",
+          "change"
+        ]
+      }
+    },
+    "invalidated_handoff": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "old_generation_id",
+    "new_generation_id",
+    "changes",
+    "invalidated_handoff"
+  ]
+}

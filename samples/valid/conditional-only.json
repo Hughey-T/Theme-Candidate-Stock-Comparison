@@ -1,0 +1,5 @@
+{
+  "sample_id": "conditional-only",
+  "expected_valid": true,
+  "fixture": "tests executable mutation contract"
+}

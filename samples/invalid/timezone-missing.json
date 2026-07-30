@@ -1,0 +1,5 @@
+{
+  "sample_id": "timezone-missing",
+  "expected_valid": false,
+  "fixture": "tests executable mutation contract"
+}

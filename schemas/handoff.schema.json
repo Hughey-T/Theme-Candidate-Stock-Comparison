@@ -1,0 +1,158 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_set_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "theme": {
+      "type": "string",
+      "minLength": 1
+    },
+    "comparison_as_of": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "source_cutoff_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "investment_horizon": {
+      "$schema": "https://json-schema.org/draft/2020-12/schema",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tactical": {
+          "const": "6-12 months"
+        },
+        "structural": {
+          "const": "2-3 years"
+        }
+      },
+      "required": [
+        "tactical",
+        "structural"
+      ]
+    },
+    "primary_candidate": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "secondary_candidate": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "conditional_candidates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "watch_candidates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "excluded_candidates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "no_selection": {
+      "type": "boolean"
+    },
+    "ranking_by_horizon": {
+      "type": "object"
+    },
+    "common_scenarios": {
+      "type": "object"
+    },
+    "company_scenario_results": {
+      "type": "object"
+    },
+    "key_assumptions": {
+      "type": "array"
+    },
+    "shared_theme_risks": {
+      "type": "array"
+    },
+    "company_specific_risks": {
+      "type": "object"
+    },
+    "catalysts": {
+      "type": "object"
+    },
+    "valuation_ranges": {
+      "type": "object"
+    },
+    "thesis_invalidation_conditions": {
+      "type": "object"
+    },
+    "confidence": {
+      "type": "object"
+    },
+    "evidence_manifest": {
+      "type": "array"
+    },
+    "recommended_next_action": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "session_id",
+    "generation_id",
+    "candidate_set_id",
+    "theme",
+    "comparison_as_of",
+    "source_cutoff_at",
+    "investment_horizon",
+    "primary_candidate",
+    "secondary_candidate",
+    "conditional_candidates",
+    "watch_candidates",
+    "excluded_candidates",
+    "no_selection",
+    "ranking_by_horizon",
+    "common_scenarios",
+    "company_scenario_results",
+    "key_assumptions",
+    "shared_theme_risks",
+    "company_specific_risks",
+    "catalysts",
+    "valuation_ranges",
+    "thesis_invalidation_conditions",
+    "confidence",
+    "evidence_manifest",
+    "recommended_next_action"
+  ]
+}

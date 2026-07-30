@@ -1,0 +1,5 @@
+{
+  "sample_id": "noncomparable-scored",
+  "expected_valid": false,
+  "fixture": "tests executable mutation contract"
+}

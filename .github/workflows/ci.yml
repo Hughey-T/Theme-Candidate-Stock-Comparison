@@ -1,0 +1,38 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit:
+    strategy:
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '${{ matrix.python }}'}
+      - run: python -m pip install -e '.[dev]'
+      - run: pytest -q
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.13'}
+      - run: python -m pip install -e '.[dev]'
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy src
+      - name: Schema samples and representative mutation suite
+        run: pytest -q tests/test_schemas.py tests/test_samples.py tests/test_semantics.py tests/test_publication.py
+  fresh-clone-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: clean}
+      - run: python -m venv /tmp/theme-venv && /tmp/theme-venv/bin/pip install './clean[dev]'
+      - run: cd clean && /tmp/theme-venv/bin/pytest -q tests/test_state.py tests/test_publication.py

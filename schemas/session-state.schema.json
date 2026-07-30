@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "mode": {
+      "enum": [
+        "initial",
+        "update"
+      ]
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_set_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "comparison_as_of": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "source_cutoff_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "current_phase": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+    },
+    "completed_phases": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 10
+      },
+      "uniqueItems": true
+    },
+    "status": {
+      "enum": [
+        "in_progress",
+        "complete",
+        "failed_terminal"
+      ]
+    },
+    "persistence_status": {
+      "enum": [
+        "not_generated",
+        "generated_not_persisted",
+        "persisted_pending_verification",
+        "integrity_verified",
+        "failed_terminal"
+      ]
+    },
+    "artifacts": {
+      "type": "array"
+    }
+  },
+  "required": [
+    "mode",
+    "session_id",
+    "generation_id",
+    "candidate_set_id",
+    "comparison_as_of",
+    "source_cutoff_at",
+    "current_phase",
+    "completed_phases",
+    "status",
+    "persistence_status",
+    "artifacts"
+  ]
+}
