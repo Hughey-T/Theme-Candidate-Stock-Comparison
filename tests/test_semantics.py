@@ -6,7 +6,7 @@ import math
 import pytest
 
 from theme_compare.engine import classify, derive_scenario_results, update_diff
-from theme_compare.models import SemanticError
+from theme_compare.models import SemanticError, strict_json_loads
 from theme_compare.validation import (
     validate_candidates,
     validate_envelope,
@@ -19,6 +19,14 @@ from theme_compare.validation import (
 
 def test_candidates_valid(candidates):
     validate_candidates(*candidates)
+
+
+@pytest.mark.parametrize(
+    "raw", [b'{"x":NaN}', b'{"x":Infinity}', b'{"x":-Infinity}', b'{"x":1,"x":2}', b"\xff"]
+)
+def test_strict_json_rejects_nonfinite_duplicate_and_invalid_utf8(raw):
+    with pytest.raises(SemanticError):
+        strict_json_loads(raw)
 
 
 @pytest.mark.parametrize("mutation", ["id", "identity", "former", "set"])

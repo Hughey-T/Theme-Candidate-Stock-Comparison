@@ -2,13 +2,15 @@
 
 | Requirement | Implementation | Contract | Executable tests |
 |---|---|---|---|
-| Packaged schemas | `schema_runtime.schema_bytes` | package data + generator | wheel outside-checkout CI, regeneration test |
-| 12 closed Phase payloads | generator `phase_contracts` | phase-artifact `oneOf` | recursive closure, 12 valid, unknown/empty/wrong payload tests |
-| Mandatory phase semantics | `phase_validation.validate_phase_artifact`, `StateMachine.command` | state/phase schemas | 10+2 E2E and mutation tests |
-| UTC/as-of update | `parse_rfc3339`, update-start handling | update-start/session-state | offset, stale/same generation, new cutoff E2E |
-| Evidence integrity | `validate_evidence` | const-classified evidence items | wrong class/reference/duplicate/future/removal mutations |
-| Scenario derivation | `validate_scenarios` | Phase 7/10 scenario result | annualized/weighted/month mutations |
-| Ranking and selection | ranking + Phase 10 dispatcher | Phase 10 atomic metrics/rankings/selection | score/order/gate/NO_SELECTION mutations |
-| Exact publication | `publish/reconstruct` | publication manifest | missing/modified manifest, missing/extra/duplicate/path/hash tests |
-| Persistence failure | transition/terminal_failure/latest | manifest status/failure metadata | invalid transition and latest tests |
-| Reproducible CI | constraints + workflow | generated resources | 3.11–3.13, quality, schema/mutation, wheel E2E |
+| Windows-safe packaged schemas | `schema_runtime.schema_bytes` | `src/theme_compare/schemas`, no symlink | wheel outside-checkout CI, regeneration test |
+| 12 closed Phase payloads | generator `phase_contracts` | phase-artifact `oneOf` | recursive closure, 12 valid, unknown/empty/type tests |
+| Detailed-candidate coverage | `phase_validation.exact` and Phase 10 coverage | Phase 2–10 arrays/maps | duplicate/missing/unknown coverage mutations |
+| Complete comparability matrix | normalized undirected pair/metric keys | Phase 2 matrix | duplicate/reverse/self/unknown/missing tests |
+| Mandatory semantics/history | dispatcher + `StateMachine._validate_generation_history` | state/phase schemas | 10+2 E2E, old generation tampering |
+| Strict JSON/finite | `models.strict_json_loads`, recursive finite checks | numeric constraints | NaN/Infinity/duplicate key/UTF-8 mutations |
+| Evidence registry | `validate_evidence`, payload-ref walker | const evidence classes | wrong class/reference/duplicate/future mutations |
+| Scenario and selection | `validate_scenarios`, initial/update selection dispatcher | Phase 7/10/Update 2 | annualized/weighted/month/ranking/classification mutations |
+| Automatic handoff lifecycle | StateMachine initial activation/update application | handoff/session state | Update E2E asserts old superseded/new active |
+| Typed handoff maps | generated handoff Schema + state coverage | fixed rankings/scenarios and typed candidate maps | handoff coverage mutations |
+| Exact publication | `publish/reconstruct` | publication manifest | missing/modified manifest, inventory/path/hash tests |
+| Reproducible CI | constraints + workflow | package resources | 3.11–3.13, quality, mutation, wheel E2E |

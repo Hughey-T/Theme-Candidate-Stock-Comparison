@@ -76,7 +76,13 @@ def test_update_two_phases_preserves_generation(tmp_path):
     )
     sm.command("次", artifact(1, "g2", "update", "2025-01-31T00:00:00Z"))
     sm.command("次", artifact(2, "g2", "update", "2025-01-31T00:00:00Z"))
-    assert sm.load()["status"] == "complete"
+    completed = sm.load()
+    assert completed["status"] == "complete"
+    assert completed["active_handoff_id"] == "h2"
+    assert completed["handoff_history"]["h1"]["status"] == "superseded"
+    assert completed["handoff_history"]["h1"]["superseded_by"] == "h2"
+    assert completed["handoff_history"]["h2"]["status"] == "active"
+    assert completed["superseded_handoff_ids"] == ["h1"]
 
 
 @pytest.mark.parametrize(
@@ -128,3 +134,85 @@ def test_malformed_judgment_rejected(tmp_path):
     bad["judgments"] = [{"judgment": "x"}]
     with pytest.raises(SemanticError, match="schema"):
         machine(tmp_path).command("次", bad)
+
+
+@pytest.mark.parametrize("field", ["theme_purity", "theme_sensitivity", "value_capture"])
+def test_phase_candidate_coverage_rejected(tmp_path, field):
+    sm = machine(tmp_path)
+    sm.command("次", artifact(1))
+    sm.command("次", artifact(2))
+    bad = artifact(3)
+    bad["payload"]["theme_value_capture"][field].append(
+        dict(bad["payload"]["theme_value_capture"][field][0])
+    )
+    with pytest.raises(SemanticError, match="coverage"):
+        sm.command("次", bad)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["duplicate_reverse", "missing_metric", "unknown_metric", "self_pair"]
+)
+def test_comparability_matrix_contract_rejected(tmp_path, mutation):
+    sm = machine(tmp_path)
+    sm.command("次", artifact(1))
+    bad = artifact(2)
+    value = bad["payload"]["business_models"]
+    second = dict(value["candidates"][0])
+    second.update(candidate_id="B")
+    value["candidates"].append(second)
+    value["detailed_candidates"].append("B")
+    value["comparability_matrix"] = [
+        {
+            "left_candidate_id": "A",
+            "right_candidate_id": "B",
+            "metric": metric,
+            "comparability": "comparable",
+        }
+        for metric in ("FCF", "revenue")
+    ]
+    if mutation == "duplicate_reverse":
+        value["comparability_matrix"].append(
+            {
+                "left_candidate_id": "B",
+                "right_candidate_id": "A",
+                "metric": "FCF",
+                "comparability": "not_comparable",
+            }
+        )
+    elif mutation == "missing_metric":
+        value["comparability_matrix"].pop()
+    elif mutation == "unknown_metric":
+        value["comparability_matrix"][0]["metric"] = "unknown"
+    else:
+        value["comparability_matrix"][0].update(right_candidate_id="A")
+    with pytest.raises(SemanticError):
+        sm.command("次", bad)
+
+
+@pytest.mark.parametrize("mutation", ["artifact_generation", "artifact_cutoff", "candidate_set"])
+def test_old_generation_history_tampering_rejected(tmp_path, mutation):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    state = json.loads(sm.path.read_text())
+    if mutation == "artifact_generation":
+        state["generation_history"]["g1"]["artifacts"][0]["generation_id"] = "tampered"
+    elif mutation == "artifact_cutoff":
+        state["generation_history"]["g1"]["artifacts"][0]["source_cutoff_at"] = (
+            "2024-12-31T00:00:00Z"
+        )
+    else:
+        state["generation_history"]["g1"]["candidate_set_id"] = "tampered"
+    sm.path.write_text(json.dumps(state))
+    with pytest.raises(SemanticError):
+        sm.load()
+
+
+def test_payload_evidence_reference_uses_generation_registry(tmp_path):
+    sm = machine(tmp_path)
+    sm.command("次", artifact(1))
+    sm.command("次", artifact(2))
+    bad = artifact(3)
+    bad["payload"]["theme_value_capture"]["theme_purity"][0]["evidence_refs"] = ["UNKNOWN"]
+    with pytest.raises(SemanticError, match="evidence"):
+        sm.command("次", bad)

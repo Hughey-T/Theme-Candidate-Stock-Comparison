@@ -76,7 +76,7 @@ def test_unknown_file_and_symlink_rejected(tmp_path):
     manifest = publish(tmp_path, {"x": 1}, context())
     directory = tmp_path / "generations/g1"
     (directory / "unknown").write_text("x")
-    with pytest.raises(SemanticError, match="unknown"):
+    with pytest.raises(SemanticError, match="inventory"):
         reconstruct(directory, manifest)
 
 

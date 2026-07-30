@@ -133,44 +133,355 @@
     },
     "ranking_by_horizon": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": false,
+      "properties": {
+        "company_quality": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "tactical": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "structural": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "risk_adjusted": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "portfolio_fit": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "company_quality",
+        "tactical",
+        "structural",
+        "risk_adjusted",
+        "portfolio_fit"
+      ]
     },
     "common_scenarios": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": false,
+      "properties": {
+        "THEME_BEAR": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "THEME_BASE": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "THEME_BULL": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "THEME_BEAR",
+        "THEME_BASE",
+        "THEME_BULL"
+      ]
     },
     "company_scenario_results": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scenarios": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "THEME_BEAR": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "current_price": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "target_price": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "dividend": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "diluted_shares": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "realization_months": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "total_return": {
+                    "type": "number"
+                  },
+                  "annualized_return": {
+                    "type": "number"
+                  },
+                  "permanent_loss": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "current_price",
+                  "target_price",
+                  "dividend",
+                  "diluted_shares",
+                  "realization_months",
+                  "total_return",
+                  "annualized_return",
+                  "permanent_loss"
+                ]
+              },
+              "THEME_BASE": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "current_price": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "target_price": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "dividend": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "diluted_shares": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "realization_months": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "total_return": {
+                    "type": "number"
+                  },
+                  "annualized_return": {
+                    "type": "number"
+                  },
+                  "permanent_loss": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "current_price",
+                  "target_price",
+                  "dividend",
+                  "diluted_shares",
+                  "realization_months",
+                  "total_return",
+                  "annualized_return",
+                  "permanent_loss"
+                ]
+              },
+              "THEME_BULL": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "current_price": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "target_price": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "dividend": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "diluted_shares": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "realization_months": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "total_return": {
+                    "type": "number"
+                  },
+                  "annualized_return": {
+                    "type": "number"
+                  },
+                  "permanent_loss": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "current_price",
+                  "target_price",
+                  "dividend",
+                  "diluted_shares",
+                  "realization_months",
+                  "total_return",
+                  "annualized_return",
+                  "permanent_loss"
+                ]
+              }
+            },
+            "required": [
+              "THEME_BEAR",
+              "THEME_BASE",
+              "THEME_BULL"
+            ]
+          },
+          "probability_weighted_return": {
+            "type": "number"
+          },
+          "probability_weighted_annualized_return": {
+            "type": "number"
+          },
+          "expected_realization_months": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "downside_probability": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "permanent_loss_probability": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "candidate_id",
+          "scenarios",
+          "probability_weighted_return",
+          "probability_weighted_annualized_return",
+          "expected_realization_months",
+          "downside_probability",
+          "permanent_loss_probability"
+        ]
+      }
     },
     "key_assumptions": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "shared_theme_risks": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "company_specific_risks": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "catalysts": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "valuation_ranges": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "low": {
+            "type": "number"
+          },
+          "high": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "low",
+          "high"
+        ]
+      }
     },
     "thesis_invalidation_conditions": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
     },
     "confidence": {
       "type": "object",
-      "additionalProperties": true
+      "additionalProperties": {
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
+      }
     },
     "evidence_manifest": {
-      "type": "array"
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
     },
     "recommended_next_action": {
       "type": "string",

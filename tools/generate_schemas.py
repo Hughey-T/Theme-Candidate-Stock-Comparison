@@ -42,6 +42,7 @@ def main():
     )
     evidence_base = {
         "evidence_id": STRING,
+        "candidate_id": {"type": ["string", "null"]},
         "statement": STRING,
         "as_of": DT,
     }
@@ -137,7 +138,11 @@ def main():
             "status": {"enum": ["active", "superseded", "invalidated"]},
             "primary_candidate": {"type": ["string", "null"]},
             "secondary_candidate": {"type": ["string", "null"]},
+            "conditional_candidates": {"type": "array", "items": STRING, "uniqueItems": True},
+            "watch_candidates": {"type": "array", "items": STRING, "uniqueItems": True},
+            "excluded_candidates": {"type": "array", "items": STRING, "uniqueItems": True},
             "overall_decision": {"enum": ["SELECTION", "NO_SELECTION"]},
+            "supersedes": {"type": ["string", "null"]},
         }
     )
     phase_contracts = {
@@ -204,7 +209,7 @@ def main():
                     },
                     "comparability_matrix": {
                         "type": "array",
-                        "minItems": 1,
+                        "minItems": 0,
                         "items": closed(
                             {
                                 "left_candidate_id": STRING,
@@ -311,13 +316,25 @@ def main():
                         "items": closed(
                             {
                                 "candidate_id": STRING,
-                                "event": STRING,
-                                "expected_date": DT,
-                                "probability": score,
-                                "market_impact": STRING,
-                                "priced_in_level": score,
-                                "failure_impact": STRING,
-                                "evidence_refs": {"type": "array", "items": STRING, "minItems": 1},
+                                "status": {"enum": ["identified", "no_identified_catalyst"]},
+                                "event": {"type": ["string", "null"]},
+                                "expected_date": {
+                                    "type": ["string", "null"],
+                                    "format": "date-time",
+                                },
+                                "probability": {
+                                    "type": ["number", "null"],
+                                    "minimum": 0,
+                                    "maximum": 1,
+                                },
+                                "market_impact": {"type": ["string", "null"]},
+                                "priced_in_level": {
+                                    "type": ["number", "null"],
+                                    "minimum": 0,
+                                    "maximum": 1,
+                                },
+                                "failure_impact": {"type": ["string", "null"]},
+                                "evidence_refs": {"type": "array", "items": STRING},
                             }
                         ),
                     },
@@ -478,6 +495,14 @@ def main():
             ),
         ),
     }
+    update_selection_properties = {
+        **phase_contracts[10][1]["properties"],
+        "ranking_changes": phase_contracts[102][1]["properties"]["ranking_changes"],
+        "classification_changes": phase_contracts[102][1]["properties"]["classification_changes"],
+        "superseded_handoff_id": STRING,
+        "updated_handoff": handoff_ref,
+    }
+    phase_contracts[102] = ("updated_selection", closed(update_selection_properties))
     variants = []
     for key, (field, phase_object) in phase_contracts.items():
         mode = "initial" if key < 100 else "update"
@@ -525,17 +550,45 @@ def main():
             "watch_candidates": {"type": "array", "items": STRING, "uniqueItems": True},
             "excluded_candidates": {"type": "array", "items": STRING, "uniqueItems": True},
             "overall_decision": {"enum": ["SELECTION", "NO_SELECTION"]},
-            "ranking_by_horizon": {"type": "object", "additionalProperties": True},
-            "common_scenarios": {"type": "object", "additionalProperties": True},
-            "company_scenario_results": {"type": "object", "additionalProperties": True},
-            "key_assumptions": {"type": "array"},
-            "shared_theme_risks": {"type": "array"},
-            "company_specific_risks": {"type": "object", "additionalProperties": True},
-            "catalysts": {"type": "object", "additionalProperties": True},
-            "valuation_ranges": {"type": "object", "additionalProperties": True},
-            "thesis_invalidation_conditions": {"type": "object", "additionalProperties": True},
-            "confidence": {"type": "object", "additionalProperties": True},
-            "evidence_manifest": {"type": "array"},
+            "ranking_by_horizon": closed(
+                {
+                    name: candidate_ids
+                    for name in [
+                        "company_quality",
+                        "tactical",
+                        "structural",
+                        "risk_adjusted",
+                        "portfolio_fit",
+                    ]
+                }
+            ),
+            "common_scenarios": closed({name: score for name in SCENARIOS}),
+            "company_scenario_results": {"type": "object", "additionalProperties": scenario_result},
+            "key_assumptions": {"type": "array", "items": STRING},
+            "shared_theme_risks": {"type": "array", "items": STRING},
+            "company_specific_risks": {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": STRING},
+            },
+            "catalysts": {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": STRING},
+            },
+            "valuation_ranges": {
+                "type": "object",
+                "additionalProperties": closed(
+                    {"low": {"type": "number"}, "high": {"type": "number"}}
+                ),
+            },
+            "thesis_invalidation_conditions": {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": STRING},
+            },
+            "confidence": {
+                "type": "object",
+                "additionalProperties": {"enum": ["low", "medium", "high"]},
+            },
+            "evidence_manifest": {"type": "array", "items": STRING},
             "recommended_next_action": STRING,
         }
     )
@@ -695,7 +748,7 @@ def main():
             }
         ),
     }
-    target = ROOT / "schemas"
+    target = ROOT / "src" / "theme_compare" / "schemas"
     target.mkdir(exist_ok=True)
     for name, schema in schemas.items():
         schema.setdefault("$schema", "https://json-schema.org/draft/2020-12/schema")

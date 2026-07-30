@@ -13,7 +13,7 @@ def test_runtime_reads_packaged_schema_resource():
     assert json.loads(schema_bytes("phase-artifact"))["oneOf"]
 
 
-@pytest.mark.parametrize("path", sorted((ROOT / "schemas").glob("*.json")))
+@pytest.mark.parametrize("path", sorted((ROOT / "src/theme_compare/schemas").glob("*.json")))
 def test_schema_is_valid_and_closed(path):
     schema = json.loads(path.read_text())
     Draft202012Validator.check_schema(schema)
@@ -37,7 +37,9 @@ def test_schema_is_valid_and_closed(path):
 
 
 def test_unknown_property_rejected():
-    schema = json.loads((ROOT / "schemas/normalized-candidate.schema.json").read_text())
+    schema = json.loads(
+        (ROOT / "src/theme_compare/schemas/normalized-candidate.schema.json").read_text()
+    )
     document = {
         key: (
             False
@@ -56,7 +58,7 @@ def test_unknown_property_rejected():
 
 
 def test_timezone_missing_rejected():
-    schema = json.loads((ROOT / "schemas/session-state.schema.json").read_text())
+    schema = json.loads((ROOT / "src/theme_compare/schemas/session-state.schema.json").read_text())
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     assert list(
         validator.iter_errors(
@@ -78,7 +80,7 @@ def test_timezone_missing_rejected():
 
 
 def test_generated_schemas_are_current(tmp_path):
-    before = {p.name: p.read_bytes() for p in (ROOT / "schemas").glob("*.json")}
+    before = {p.name: p.read_bytes() for p in (ROOT / "src/theme_compare/schemas").glob("*.json")}
     import subprocess
     import sys
 
@@ -88,7 +90,9 @@ def test_generated_schemas_are_current(tmp_path):
         check=True,
         env={"PYTHONPATH": "src"},
     )
-    assert before == {p.name: p.read_bytes() for p in (ROOT / "schemas").glob("*.json")}
+    assert before == {
+        p.name: p.read_bytes() for p in (ROOT / "src/theme_compare/schemas").glob("*.json")
+    }
 
 
 @pytest.mark.parametrize(
@@ -109,7 +113,7 @@ def test_generated_schemas_are_current(tmp_path):
     ],
 )
 def test_each_phase_contract_accepts_only_its_payload(phase, mode, field):
-    schema = json.loads((ROOT / "schemas/phase-artifact.schema.json").read_text())
+    schema = json.loads((ROOT / "src/theme_compare/schemas/phase-artifact.schema.json").read_text())
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     document = valid_artifact(
         phase,
@@ -127,7 +131,9 @@ def test_each_phase_contract_accepts_only_its_payload(phase, mode, field):
 
 
 def test_candidate_level_no_selection_rejected_by_schema():
-    schema = json.loads((ROOT / "schemas/final-selection.schema.json").read_text())
+    schema = json.loads(
+        (ROOT / "src/theme_compare/schemas/final-selection.schema.json").read_text()
+    )
     document = {
         "classifications": [{"candidate_id": "A", "classification": "NO_SELECTION"}],
         "overall_decision": "NO_SELECTION",
@@ -141,7 +147,7 @@ def test_candidate_level_no_selection_rejected_by_schema():
     ["required", "wrong_type", "wrong_phase_payload", "candidate_count", "phase10_incomplete"],
 )
 def test_phase_internal_contract_mutations(mutation):
-    schema = json.loads((ROOT / "schemas/phase-artifact.schema.json").read_text())
+    schema = json.loads((ROOT / "src/theme_compare/schemas/phase-artifact.schema.json").read_text())
     validator = Draft202012Validator(schema, format_checker=FormatChecker())
     phase = 10 if mutation == "phase10_incomplete" else 1
     document = valid_artifact(phase)

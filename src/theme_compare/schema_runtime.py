@@ -1,11 +1,10 @@
 """Mandatory in-process JSON Schema validation using packaged resources."""
 
 from __future__ import annotations
-import json
 from importlib.resources import files
 from typing import Any
 from jsonschema import Draft202012Validator, FormatChecker
-from .models import SemanticError
+from .models import SemanticError, strict_json_loads
 
 
 def schema_bytes(name: str) -> bytes:
@@ -13,7 +12,7 @@ def schema_bytes(name: str) -> bytes:
 
 
 def validate_document(name: str, document: Any) -> None:
-    schema = json.loads(schema_bytes(name))
+    schema = strict_json_loads(schema_bytes(name))
     errors = sorted(
         Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(document),
         key=lambda e: list(e.absolute_path),

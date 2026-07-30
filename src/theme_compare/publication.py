@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import base64
 import hashlib
-import json
 import os
 import shutil
 import tempfile
@@ -12,7 +11,7 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .constants import MAX_PART_BYTES, PERSISTENCE, SCHEMA_VERSION
-from .models import SemanticError, canonical_bytes, canonical_hash, parse_rfc3339
+from .models import SemanticError, canonical_bytes, canonical_hash, parse_rfc3339, strict_json_loads
 from .schema_runtime import validate_document
 
 
@@ -123,7 +122,7 @@ def reconstruct(directory: Path, manifest: dict[str, Any]) -> dict[str, Any]:
     if manifest_path.is_symlink() or not manifest_path.is_file():
         raise SemanticError("manifest missing or symlinked")
     disk_bytes = manifest_path.read_bytes()
-    disk_manifest = json.loads(disk_bytes)
+    disk_manifest = strict_json_loads(disk_bytes)
     validate_document("publication-manifest", disk_manifest)
     if disk_bytes != canonical_bytes(manifest) or disk_manifest != manifest:
         raise SemanticError("on-disk manifest mismatch")
@@ -159,7 +158,7 @@ def reconstruct(directory: Path, manifest: dict[str, Any]) -> dict[str, Any]:
         raw = path.read_bytes()
         if len(raw) != item["size"] or hashlib.sha256(raw).hexdigest() != item["raw_sha256"]:
             raise SemanticError("part hash/size mismatch")
-        part = json.loads(raw)
+        part = strict_json_loads(raw)
         if set(part) != {
             "schema_version",
             "generation_id",
@@ -176,7 +175,7 @@ def reconstruct(directory: Path, manifest: dict[str, Any]) -> dict[str, Any]:
         ):
             raise SemanticError("part envelope mismatch")
         chunks.append(base64.b64decode(part["data"], validate=True))
-    value: dict[str, Any] = json.loads(b"".join(chunks))
+    value: dict[str, Any] = strict_json_loads(b"".join(chunks))
     if canonical_hash(value) != manifest["canonical_sha256"]:
         raise SemanticError("reconstruction hash mismatch")
     return value

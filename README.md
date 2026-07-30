@@ -15,12 +15,14 @@ runtimeが保証しないものは、sourceの真実性、市場データの完�
 * applicability、data state、comparability、dependency root、正規化scoreから5 rankingを再導出
 * hard gateを加点で相殺せず、cash/investment benchmarkとリスク条件からoverall `SELECTION`/`NO_SELECTION`を分離
 * 12 Phaseの内部までclosedなpackage-resource Schemaと必須phase semantic dispatcher
-* evidence分類・ID・cutoff・support/contrary referenceの整合性検証
+* Phase 2 canonical detail setに対するPhase 3～10の完全candidate coverageとpair/metric matrix検証
+* generation evidence registryによる分類・ID・cutoff・全payload referenceの整合性検証
 * generationごとのas-of/cutoffとold generation/handoff historyを保持し、update handoffをsupersede
+* NaN/Infinity、duplicate JSON key、不正UTF-8を拒否するstrict runtime decode
 * base64のclosed JSON partsをtemporary directoryで生成・復元検証してatomic rename
 * remote integrity verification後だけlatestを更新
 
-Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Runtimeは`importlib.resources`で読み、source checkout、editable install、wheel installの経路差を作りません。rootの`schemas`は同じ正本への参照です。
+Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Runtimeは`importlib.resources`で読み、source checkout、editable install、wheel installの経路差を作りません。Windowsを含めsymlinkを必要とせず、generatorとtestsもpackage resource pathを直接使用します。
 
 ## Development
 

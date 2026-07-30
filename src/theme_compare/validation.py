@@ -171,14 +171,16 @@ def validate_scores(rows: list[dict[str, Any]]) -> None:
                 dependencies.add(root)
 
 
-def validate_evidence(artifact: dict[str, Any]) -> None:
+def validate_evidence(
+    artifact: dict[str, Any], registry: dict[str, dict[str, Any]] | None = None
+) -> dict[str, dict[str, Any]]:
     """Validate evidence classification, uniqueness, cutoff and judgment references."""
     expected_types = {
         "facts": "FACT",
         "company_claims": "COMPANY_CLAIM",
         "external_estimates": "EXTERNAL_ESTIMATE",
     }
-    evidence: dict[str, dict[str, Any]] = {}
+    evidence = dict(registry or {})
     cutoff = parse_rfc3339(artifact["source_cutoff_at"])
     for collection, expected_type in expected_types.items():
         for item in artifact[collection]:
@@ -195,3 +197,4 @@ def validate_evidence(artifact: dict[str, Any]) -> None:
             refs = judgment[field]
             if not refs or any(ref not in evidence for ref in refs):
                 raise SemanticError("unknown or empty evidence reference")
+    return evidence

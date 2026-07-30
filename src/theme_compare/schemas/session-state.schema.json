@@ -88,6 +88,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -103,6 +109,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -119,6 +126,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -134,6 +147,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -150,6 +164,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -165,6 +185,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -572,6 +593,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -587,6 +614,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -603,6 +631,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -618,6 +652,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -634,6 +669,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -649,6 +690,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -784,7 +826,7 @@
                             },
                             "comparability_matrix": {
                               "type": "array",
-                              "minItems": 1,
+                              "minItems": 0,
                               "items": {
                                 "type": "object",
                                 "additionalProperties": false,
@@ -891,6 +933,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -906,6 +954,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -922,6 +971,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -937,6 +992,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -953,6 +1009,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -968,6 +1030,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -1230,6 +1293,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -1245,6 +1314,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -1261,6 +1331,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -1276,6 +1352,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -1292,6 +1369,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -1307,6 +1390,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -1536,6 +1620,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -1551,6 +1641,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -1567,6 +1658,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -1582,6 +1679,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -1598,6 +1696,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -1613,6 +1717,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -1803,6 +1908,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -1818,6 +1929,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -1834,6 +1946,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -1849,6 +1967,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -1865,6 +1984,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -1880,6 +2005,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -2065,6 +2191,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -2080,6 +2212,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -2096,6 +2229,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -2111,6 +2250,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -2127,6 +2267,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -2142,6 +2288,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -2495,6 +2642,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -2510,6 +2663,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -2526,6 +2680,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -2541,6 +2701,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -2557,6 +2718,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -2572,6 +2739,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -2658,44 +2826,64 @@
                                     "type": "string",
                                     "minLength": 1
                                   },
+                                  "status": {
+                                    "enum": [
+                                      "identified",
+                                      "no_identified_catalyst"
+                                    ]
+                                  },
                                   "event": {
-                                    "type": "string",
-                                    "minLength": 1
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   },
                                   "expected_date": {
-                                    "type": "string",
-                                    "format": "date-time",
-                                    "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ],
+                                    "format": "date-time"
                                   },
                                   "probability": {
-                                    "type": "number",
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
                                     "minimum": 0,
                                     "maximum": 1
                                   },
                                   "market_impact": {
-                                    "type": "string",
-                                    "minLength": 1
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   },
                                   "priced_in_level": {
-                                    "type": "number",
+                                    "type": [
+                                      "number",
+                                      "null"
+                                    ],
                                     "minimum": 0,
                                     "maximum": 1
                                   },
                                   "failure_impact": {
-                                    "type": "string",
-                                    "minLength": 1
+                                    "type": [
+                                      "string",
+                                      "null"
+                                    ]
                                   },
                                   "evidence_refs": {
                                     "type": "array",
                                     "items": {
                                       "type": "string",
                                       "minLength": 1
-                                    },
-                                    "minItems": 1
+                                    }
                                   }
                                 },
                                 "required": [
                                   "candidate_id",
+                                  "status",
                                   "event",
                                   "expected_date",
                                   "probability",
@@ -2798,6 +2986,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -2813,6 +3007,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -2829,6 +3024,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -2844,6 +3045,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -2860,6 +3062,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -2875,6 +3083,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -3071,6 +3280,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -3086,6 +3301,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -3102,6 +3318,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -3117,6 +3339,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -3133,6 +3356,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -3148,6 +3377,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -3733,10 +3963,40 @@
                                     "null"
                                   ]
                                 },
+                                "conditional_candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "uniqueItems": true
+                                },
+                                "watch_candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "uniqueItems": true
+                                },
+                                "excluded_candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "uniqueItems": true
+                                },
                                 "overall_decision": {
                                   "enum": [
                                     "SELECTION",
                                     "NO_SELECTION"
+                                  ]
+                                },
+                                "supersedes": {
+                                  "type": [
+                                    "string",
+                                    "null"
                                   ]
                                 }
                               },
@@ -3746,7 +4006,11 @@
                                 "status",
                                 "primary_candidate",
                                 "secondary_candidate",
-                                "overall_decision"
+                                "conditional_candidates",
+                                "watch_candidates",
+                                "excluded_candidates",
+                                "overall_decision",
+                                "supersedes"
                               ]
                             },
                             "evidence_refs": {
@@ -3831,6 +4095,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -3846,6 +4116,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -3862,6 +4133,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -3877,6 +4154,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -3893,6 +4171,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -3908,6 +4192,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -4132,6 +4417,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -4147,6 +4438,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -4163,6 +4455,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -4178,6 +4476,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -4194,6 +4493,12 @@
                             "type": "string",
                             "minLength": 1
                           },
+                          "candidate_id": {
+                            "type": [
+                              "string",
+                              "null"
+                            ]
+                          },
                           "statement": {
                             "type": "string",
                             "minLength": 1
@@ -4209,6 +4514,7 @@
                         },
                         "required": [
                           "evidence_id",
+                          "candidate_id",
                           "statement",
                           "as_of",
                           "source_type"
@@ -4284,6 +4590,574 @@
                           "type": "object",
                           "additionalProperties": false,
                           "properties": {
+                            "candidate_ids": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "minItems": 1,
+                              "uniqueItems": true
+                            },
+                            "atomic_ranking_metrics": {
+                              "type": "array",
+                              "minItems": 1,
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "candidate_id": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "ranking_type": {
+                                    "enum": [
+                                      "company_quality",
+                                      "tactical",
+                                      "structural",
+                                      "risk_adjusted",
+                                      "portfolio_fit"
+                                    ]
+                                  },
+                                  "value": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  "weight": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "effective_weight": {
+                                    "type": "number",
+                                    "minimum": 0
+                                  },
+                                  "applicable": {
+                                    "type": "boolean"
+                                  },
+                                  "state": {
+                                    "enum": [
+                                      "observed",
+                                      "estimated",
+                                      "not_disclosed",
+                                      "not_applicable",
+                                      "not_evaluable",
+                                      "conflicting_sources",
+                                      "stale",
+                                      "missing"
+                                    ]
+                                  },
+                                  "comparability": {
+                                    "enum": [
+                                      "comparable",
+                                      "partially_comparable",
+                                      "not_comparable",
+                                      "reference_only"
+                                    ]
+                                  },
+                                  "dependency_root": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  }
+                                },
+                                "required": [
+                                  "candidate_id",
+                                  "ranking_type",
+                                  "value",
+                                  "weight",
+                                  "effective_weight",
+                                  "applicable",
+                                  "state",
+                                  "comparability",
+                                  "dependency_root"
+                                ]
+                              }
+                            },
+                            "stored_rankings": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "company_quality": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "minItems": 1,
+                                  "uniqueItems": true
+                                },
+                                "tactical": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "minItems": 1,
+                                  "uniqueItems": true
+                                },
+                                "structural": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "minItems": 1,
+                                  "uniqueItems": true
+                                },
+                                "risk_adjusted": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "minItems": 1,
+                                  "uniqueItems": true
+                                },
+                                "portfolio_fit": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "minItems": 1,
+                                  "uniqueItems": true
+                                }
+                              },
+                              "required": [
+                                "company_quality",
+                                "tactical",
+                                "structural",
+                                "risk_adjusted",
+                                "portfolio_fit"
+                              ]
+                            },
+                            "stored_scores": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "company_quality": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "number"
+                                  }
+                                },
+                                "tactical": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "number"
+                                  }
+                                },
+                                "structural": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "number"
+                                  }
+                                },
+                                "risk_adjusted": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "number"
+                                  }
+                                },
+                                "portfolio_fit": {
+                                  "type": "object",
+                                  "additionalProperties": {
+                                    "type": "number"
+                                  }
+                                }
+                              },
+                              "required": [
+                                "company_quality",
+                                "tactical",
+                                "structural",
+                                "risk_adjusted",
+                                "portfolio_fit"
+                              ]
+                            },
+                            "scenario_probabilities": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "THEME_BEAR": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                },
+                                "THEME_BASE": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                },
+                                "THEME_BULL": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                }
+                              },
+                              "required": [
+                                "THEME_BEAR",
+                                "THEME_BASE",
+                                "THEME_BULL"
+                              ]
+                            },
+                            "scenario_results": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "candidate_id": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "scenarios": {
+                                    "type": "object",
+                                    "additionalProperties": false,
+                                    "properties": {
+                                      "THEME_BEAR": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "current_price": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "target_price": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "dividend": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "diluted_shares": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "realization_months": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "total_return": {
+                                            "type": "number"
+                                          },
+                                          "annualized_return": {
+                                            "type": "number"
+                                          },
+                                          "permanent_loss": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "current_price",
+                                          "target_price",
+                                          "dividend",
+                                          "diluted_shares",
+                                          "realization_months",
+                                          "total_return",
+                                          "annualized_return",
+                                          "permanent_loss"
+                                        ]
+                                      },
+                                      "THEME_BASE": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "current_price": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "target_price": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "dividend": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "diluted_shares": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "realization_months": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "total_return": {
+                                            "type": "number"
+                                          },
+                                          "annualized_return": {
+                                            "type": "number"
+                                          },
+                                          "permanent_loss": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "current_price",
+                                          "target_price",
+                                          "dividend",
+                                          "diluted_shares",
+                                          "realization_months",
+                                          "total_return",
+                                          "annualized_return",
+                                          "permanent_loss"
+                                        ]
+                                      },
+                                      "THEME_BULL": {
+                                        "type": "object",
+                                        "additionalProperties": false,
+                                        "properties": {
+                                          "current_price": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "target_price": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "dividend": {
+                                            "type": "number",
+                                            "minimum": 0
+                                          },
+                                          "diluted_shares": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "realization_months": {
+                                            "type": "number",
+                                            "exclusiveMinimum": 0
+                                          },
+                                          "total_return": {
+                                            "type": "number"
+                                          },
+                                          "annualized_return": {
+                                            "type": "number"
+                                          },
+                                          "permanent_loss": {
+                                            "type": "boolean"
+                                          }
+                                        },
+                                        "required": [
+                                          "current_price",
+                                          "target_price",
+                                          "dividend",
+                                          "diluted_shares",
+                                          "realization_months",
+                                          "total_return",
+                                          "annualized_return",
+                                          "permanent_loss"
+                                        ]
+                                      }
+                                    },
+                                    "required": [
+                                      "THEME_BEAR",
+                                      "THEME_BASE",
+                                      "THEME_BULL"
+                                    ]
+                                  },
+                                  "probability_weighted_return": {
+                                    "type": "number"
+                                  },
+                                  "probability_weighted_annualized_return": {
+                                    "type": "number"
+                                  },
+                                  "expected_realization_months": {
+                                    "type": "number",
+                                    "exclusiveMinimum": 0
+                                  },
+                                  "downside_probability": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  },
+                                  "permanent_loss_probability": {
+                                    "type": "number",
+                                    "minimum": 0,
+                                    "maximum": 1
+                                  }
+                                },
+                                "required": [
+                                  "candidate_id",
+                                  "scenarios",
+                                  "probability_weighted_return",
+                                  "probability_weighted_annualized_return",
+                                  "expected_realization_months",
+                                  "downside_probability",
+                                  "permanent_loss_probability"
+                                ]
+                              },
+                              "minItems": 1
+                            },
+                            "hard_gates": {
+                              "type": "object",
+                              "minProperties": 1,
+                              "additionalProperties": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                }
+                              }
+                            },
+                            "classifications": {
+                              "type": "array",
+                              "items": {
+                                "type": "object",
+                                "additionalProperties": false,
+                                "properties": {
+                                  "candidate_id": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "classification": {
+                                    "enum": [
+                                      "PRIMARY",
+                                      "SECONDARY",
+                                      "CONDITIONAL",
+                                      "WATCH",
+                                      "EXCLUDED"
+                                    ]
+                                  }
+                                },
+                                "required": [
+                                  "candidate_id",
+                                  "classification"
+                                ]
+                              },
+                              "minItems": 1
+                            },
+                            "overall_decision": {
+                              "enum": [
+                                "SELECTION",
+                                "NO_SELECTION"
+                              ]
+                            },
+                            "benchmark_inputs": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "cash_annualized_return": {
+                                  "type": "number"
+                                },
+                                "investment_annualized_return": {
+                                  "type": "number"
+                                }
+                              },
+                              "required": [
+                                "cash_annualized_return",
+                                "investment_annualized_return"
+                              ]
+                            },
+                            "risk_limits": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "max_downside_probability": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                },
+                                "max_permanent_loss_probability": {
+                                  "type": "number",
+                                  "minimum": 0,
+                                  "maximum": 1
+                                }
+                              },
+                              "required": [
+                                "max_downside_probability",
+                                "max_permanent_loss_probability"
+                              ]
+                            },
+                            "handoff": {
+                              "type": "object",
+                              "additionalProperties": false,
+                              "properties": {
+                                "handoff_id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "generation_id": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "status": {
+                                  "enum": [
+                                    "active",
+                                    "superseded",
+                                    "invalidated"
+                                  ]
+                                },
+                                "primary_candidate": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "secondary_candidate": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                },
+                                "conditional_candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "uniqueItems": true
+                                },
+                                "watch_candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "uniqueItems": true
+                                },
+                                "excluded_candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "uniqueItems": true
+                                },
+                                "overall_decision": {
+                                  "enum": [
+                                    "SELECTION",
+                                    "NO_SELECTION"
+                                  ]
+                                },
+                                "supersedes": {
+                                  "type": [
+                                    "string",
+                                    "null"
+                                  ]
+                                }
+                              },
+                              "required": [
+                                "handoff_id",
+                                "generation_id",
+                                "status",
+                                "primary_candidate",
+                                "secondary_candidate",
+                                "conditional_candidates",
+                                "watch_candidates",
+                                "excluded_candidates",
+                                "overall_decision",
+                                "supersedes"
+                              ]
+                            },
+                            "evidence_refs": {
+                              "type": "array",
+                              "items": {
+                                "type": "string",
+                                "minLength": 1
+                              },
+                              "minItems": 1
+                            },
                             "ranking_changes": {
                               "type": "array",
                               "items": {
@@ -4369,10 +5243,40 @@
                                     "null"
                                   ]
                                 },
+                                "conditional_candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "uniqueItems": true
+                                },
+                                "watch_candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "uniqueItems": true
+                                },
+                                "excluded_candidates": {
+                                  "type": "array",
+                                  "items": {
+                                    "type": "string",
+                                    "minLength": 1
+                                  },
+                                  "uniqueItems": true
+                                },
                                 "overall_decision": {
                                   "enum": [
                                     "SELECTION",
                                     "NO_SELECTION"
+                                  ]
+                                },
+                                "supersedes": {
+                                  "type": [
+                                    "string",
+                                    "null"
                                   ]
                                 }
                               },
@@ -4382,11 +5286,28 @@
                                 "status",
                                 "primary_candidate",
                                 "secondary_candidate",
-                                "overall_decision"
+                                "conditional_candidates",
+                                "watch_candidates",
+                                "excluded_candidates",
+                                "overall_decision",
+                                "supersedes"
                               ]
                             }
                           },
                           "required": [
+                            "candidate_ids",
+                            "atomic_ranking_metrics",
+                            "stored_rankings",
+                            "stored_scores",
+                            "scenario_probabilities",
+                            "scenario_results",
+                            "hard_gates",
+                            "classifications",
+                            "overall_decision",
+                            "benchmark_inputs",
+                            "risk_limits",
+                            "handoff",
+                            "evidence_refs",
                             "ranking_changes",
                             "classification_changes",
                             "superseded_handoff_id",
@@ -4610,44 +5531,355 @@
           },
           "ranking_by_horizon": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": false,
+            "properties": {
+              "company_quality": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "tactical": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "structural": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "risk_adjusted": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "portfolio_fit": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              }
+            },
+            "required": [
+              "company_quality",
+              "tactical",
+              "structural",
+              "risk_adjusted",
+              "portfolio_fit"
+            ]
           },
           "common_scenarios": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": false,
+            "properties": {
+              "THEME_BEAR": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "THEME_BASE": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              },
+              "THEME_BULL": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1
+              }
+            },
+            "required": [
+              "THEME_BEAR",
+              "THEME_BASE",
+              "THEME_BULL"
+            ]
           },
           "company_scenario_results": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "candidate_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "scenarios": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "THEME_BEAR": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "current_price": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "target_price": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "dividend": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "diluted_shares": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "realization_months": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "total_return": {
+                          "type": "number"
+                        },
+                        "annualized_return": {
+                          "type": "number"
+                        },
+                        "permanent_loss": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "current_price",
+                        "target_price",
+                        "dividend",
+                        "diluted_shares",
+                        "realization_months",
+                        "total_return",
+                        "annualized_return",
+                        "permanent_loss"
+                      ]
+                    },
+                    "THEME_BASE": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "current_price": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "target_price": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "dividend": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "diluted_shares": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "realization_months": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "total_return": {
+                          "type": "number"
+                        },
+                        "annualized_return": {
+                          "type": "number"
+                        },
+                        "permanent_loss": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "current_price",
+                        "target_price",
+                        "dividend",
+                        "diluted_shares",
+                        "realization_months",
+                        "total_return",
+                        "annualized_return",
+                        "permanent_loss"
+                      ]
+                    },
+                    "THEME_BULL": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "current_price": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "target_price": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "dividend": {
+                          "type": "number",
+                          "minimum": 0
+                        },
+                        "diluted_shares": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "realization_months": {
+                          "type": "number",
+                          "exclusiveMinimum": 0
+                        },
+                        "total_return": {
+                          "type": "number"
+                        },
+                        "annualized_return": {
+                          "type": "number"
+                        },
+                        "permanent_loss": {
+                          "type": "boolean"
+                        }
+                      },
+                      "required": [
+                        "current_price",
+                        "target_price",
+                        "dividend",
+                        "diluted_shares",
+                        "realization_months",
+                        "total_return",
+                        "annualized_return",
+                        "permanent_loss"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "THEME_BEAR",
+                    "THEME_BASE",
+                    "THEME_BULL"
+                  ]
+                },
+                "probability_weighted_return": {
+                  "type": "number"
+                },
+                "probability_weighted_annualized_return": {
+                  "type": "number"
+                },
+                "expected_realization_months": {
+                  "type": "number",
+                  "exclusiveMinimum": 0
+                },
+                "downside_probability": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                },
+                "permanent_loss_probability": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              },
+              "required": [
+                "candidate_id",
+                "scenarios",
+                "probability_weighted_return",
+                "probability_weighted_annualized_return",
+                "expected_realization_months",
+                "downside_probability",
+                "permanent_loss_probability"
+              ]
+            }
           },
           "key_assumptions": {
-            "type": "array"
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "shared_theme_risks": {
-            "type": "array"
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "company_specific_risks": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           },
           "catalysts": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           },
           "valuation_ranges": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "low": {
+                  "type": "number"
+                },
+                "high": {
+                  "type": "number"
+                }
+              },
+              "required": [
+                "low",
+                "high"
+              ]
+            }
           },
           "thesis_invalidation_conditions": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
           },
           "confidence": {
             "type": "object",
-            "additionalProperties": true
+            "additionalProperties": {
+              "enum": [
+                "low",
+                "medium",
+                "high"
+              ]
+            }
           },
           "evidence_manifest": {
-            "type": "array"
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            }
           },
           "recommended_next_action": {
             "type": "string",

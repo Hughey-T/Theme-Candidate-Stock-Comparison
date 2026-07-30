@@ -18,7 +18,7 @@ def derive_rankings(
     """Normalize weighted atomic metrics and rank with candidate-id tie breaking."""
     if len(candidate_ids) != len(set(candidate_ids)):
         raise SemanticError("duplicated candidate")
-    known, excluded = set(candidate_ids), excluded or set()
+    known = set(candidate_ids)
     totals: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     weights: dict[str, dict[str, float]] = defaultdict(lambda: defaultdict(float))
     dependencies: dict[tuple[str, str], set[str]] = defaultdict(set)
@@ -62,7 +62,7 @@ def derive_rankings(
                 raise SemanticError("eligible metric weight must be positive")
             scores[ranking_type][candidate] = totals[candidate][ranking_type] / denominator
         rankings[ranking_type] = sorted(
-            (candidate for candidate in candidate_ids if candidate not in excluded),
+            candidate_ids,
             key=lambda candidate: (-scores[ranking_type][candidate], candidate),
         )
     return rankings, scores

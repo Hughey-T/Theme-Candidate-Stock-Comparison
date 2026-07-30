@@ -1,5 +1,5 @@
 # Semantic validation
 
-StateMachineはstate Schema/semantic→artifact Schema→phase dispatcher→cross-phase checks→result state Schema/semantic→atomic writeの順で実行する。DispatcherはPhase 1 candidate identity/set/limits、Phase 2 matrix coverage、Phase 7 scenario derivations、Phase 10 atomic metric rankingsとPhase 7一致、Update 1 generation lineage、Update 2 handoff supersessionを検証する。
+StateMachineはstate Schema/全generation history semantic→artifact Schema→generation evidence registry→payload evidence refs→phase dispatcher→cross-phase checks→transition→result state Schema/semantic→atomic writeの順で実行する。DispatcherはPhase 2の詳細候補をcanonical setとし、Phase 3～10のcandidate arrays/mapsをexact coverage（missing/unknown/duplicateなし）で照合する。Comparability matrixはundirected pairを正規化し、全pair×primary/secondary metrics、重複、逆向き矛盾、self/unknownを検証する。
 
-Scenario validatorはcurrent/target price、dividend、realization monthsだけからTSRとannualized returnを再計算し、weighted total/annualized return、expected months、downside/permanent-loss probabilityを照合する。Evidence validatorは分類、ID一意性、cutoff以前、support/contrary reference実在を検証する。
+Scenario validatorはcurrent/target price、dividend、realization monthsだけからTSRとannualized returnを再計算し、weighted total/annualized return、expected months、downside/permanent-loss probabilityを照合する。Initial Phase 10とUpdate Phase 2はいずれもatomic metricsからrankingを再導出し、scenario、benchmark、risk limit、hard gate、classification、overall decision、handoffを再検証する。

@@ -83,7 +83,9 @@ def phase_object(phase, mode="initial"):
                 },
                 "changes": [],
             }
+        _, selection = phase_object(10, "initial")
         return "updated_selection", {
+            **selection,
             "ranking_changes": [],
             "classification_changes": [],
             "superseded_handoff_id": "h1",
@@ -93,7 +95,11 @@ def phase_object(phase, mode="initial"):
                 "status": "active",
                 "primary_candidate": "A",
                 "secondary_candidate": None,
+                "conditional_candidates": [],
+                "watch_candidates": [],
+                "excluded_candidates": [],
                 "overall_decision": "SELECTION",
+                "supersedes": "h1",
             },
         }
     if phase == 1:
@@ -125,27 +131,9 @@ def phase_object(phase, mode="initial"):
                     "maturity_stage": "growth",
                     "comparability_group": "g1",
                 },
-                {
-                    "candidate_id": "B",
-                    "business_model_class": "hardware",
-                    "valuation_method": "DCF",
-                    "primary_metric": "FCF",
-                    "secondary_metric": "revenue",
-                    "capital_intensity": "high",
-                    "profitability_stage": "profitable",
-                    "maturity_stage": "growth",
-                    "comparability_group": "g1",
-                },
             ],
-            "comparability_matrix": [
-                {
-                    "left_candidate_id": "A",
-                    "right_candidate_id": "B",
-                    "metric": "revenue",
-                    "comparability": "reference_only",
-                }
-            ],
-            "detailed_candidates": ["A", "B"],
+            "comparability_matrix": [],
+            "detailed_candidates": ["A"],
         }
     if phase == 3:
         return "theme_value_capture", {
@@ -199,6 +187,7 @@ def phase_object(phase, mode="initial"):
             "catalysts": [
                 {
                     "candidate_id": "A",
+                    "status": "identified",
                     "event": "earnings",
                     "expected_date": "2025-02-01T00:00:00Z",
                     "probability": 0.5,
@@ -208,7 +197,7 @@ def phase_object(phase, mode="initial"):
                     "evidence_refs": ["E1"],
                 }
             ],
-            "rerating_paths": [],
+            "rerating_paths": [{"candidate_id": "A", "months": 6, "description": "earnings"}],
         }
     if phase == 9:
         return "risks_and_stress", {
@@ -259,7 +248,11 @@ def phase_object(phase, mode="initial"):
             "status": "active",
             "primary_candidate": "A",
             "secondary_candidate": None,
+            "conditional_candidates": [],
+            "watch_candidates": [],
+            "excluded_candidates": [],
             "overall_decision": "SELECTION",
+            "supersedes": None,
         },
         "evidence_refs": ["E1"],
     }
@@ -268,16 +261,29 @@ def phase_object(phase, mode="initial"):
 def artifact(phase, generation="g1", mode="initial", cutoff=TS):
     field, value = phase_object(phase, mode)
     evidence = [
-        {"evidence_id": "E1", "statement": "support", "source_type": "FACT", "as_of": cutoff},
-        {"evidence_id": "E2", "statement": "contrary", "source_type": "FACT", "as_of": cutoff},
+        {
+            "evidence_id": "E1",
+            "candidate_id": None,
+            "statement": "support",
+            "source_type": "FACT",
+            "as_of": cutoff,
+        },
+        {
+            "evidence_id": "E2",
+            "candidate_id": None,
+            "statement": "contrary",
+            "source_type": "FACT",
+            "as_of": cutoff,
+        },
     ]
+    include_evidence = mode == "initial" and phase == 1
     return {
         "mode": mode,
         "phase": phase,
         "generation_id": generation,
         "candidate_set_id": SET_ID,
         "source_cutoff_at": cutoff,
-        "facts": evidence,
+        "facts": evidence if include_evidence else [],
         "company_claims": [],
         "external_estimates": [],
         "judgments": [
@@ -289,6 +295,8 @@ def artifact(phase, generation="g1", mode="initial", cutoff=TS):
                 "assumptions": [],
                 "invalidation_conditions": ["x"],
             }
-        ],
+        ]
+        if include_evidence
+        else [],
         "payload": {field: value, "summary": "complete"},
     }

@@ -14,6 +14,27 @@ class SemanticError(ValueError):
     """An artifact is structurally valid but semantically unsafe."""
 
 
+def strict_json_loads(raw: bytes | str) -> Any:
+    """Decode strict UTF-8 JSON, rejecting non-finite constants and duplicate keys."""
+    try:
+        text = raw.decode("utf-8", errors="strict") if isinstance(raw, bytes) else raw
+
+        def pairs(items: list[tuple[str, Any]]) -> dict[str, Any]:
+            result: dict[str, Any] = {}
+            for key, value in items:
+                if key in result:
+                    raise SemanticError(f"duplicate JSON key: {key}")
+                result[key] = value
+            return result
+
+        def reject_constant(value: str) -> None:
+            raise SemanticError(f"non-finite JSON number: {value}")
+
+        return json.loads(text, object_pairs_hook=pairs, parse_constant=reject_constant)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        raise SemanticError(f"invalid JSON: {exc}") from exc
+
+
 def parse_rfc3339(value: str) -> datetime:
     """Parse an RFC 3339 instant and normalize it to UTC."""
     if not re.search(r"(Z|[+-]\d\d:\d\d)$", value):
