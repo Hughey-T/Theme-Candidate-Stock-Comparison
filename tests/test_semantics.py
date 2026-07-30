@@ -10,6 +10,8 @@ from theme_compare.models import SemanticError
 from theme_compare.validation import (
     validate_candidates,
     validate_envelope,
+    validate_evidence,
+    validate_scenarios,
     validate_scores,
     validate_selection,
 )
@@ -99,6 +101,58 @@ def test_scenario_derivation_recalculates_expected_values():
     assert result["AAA"]["probability_weighted_return"] == pytest.approx(0.14)
     assert result["AAA"]["probability_weighted_annualized_return"] == pytest.approx(0.14)
     assert result["AAA"]["permanent_loss_probability"] == 0.2
+
+
+@pytest.mark.parametrize("mutation", ["case_annualized", "weighted_annualized", "months"])
+def test_annualized_derived_value_mutations_rejected(mutation):
+    common = {"THEME_BEAR": 0.2, "THEME_BASE": 0.5, "THEME_BULL": 0.3}
+    result = derive_scenario_results(common, scenario_input())
+    if mutation == "case_annualized":
+        result["AAA"]["scenarios"]["THEME_BASE"]["annualized_return"] += 0.1
+    elif mutation == "weighted_annualized":
+        result["AAA"]["probability_weighted_annualized_return"] += 0.1
+    else:
+        result["AAA"]["expected_realization_months"] += 1
+    with pytest.raises(SemanticError):
+        validate_scenarios(common, result)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["wrong_class", "unknown_ref", "duplicate", "future", "missing_contrary"]
+)
+def test_evidence_integrity_mutations_rejected(mutation):
+    artifact = {
+        "source_cutoff_at": "2025-01-01T00:00:00Z",
+        "facts": [
+            {
+                "evidence_id": "E1",
+                "statement": "a",
+                "source_type": "FACT",
+                "as_of": "2025-01-01T00:00:00Z",
+            },
+            {
+                "evidence_id": "E2",
+                "statement": "b",
+                "source_type": "FACT",
+                "as_of": "2025-01-01T00:00:00Z",
+            },
+        ],
+        "company_claims": [],
+        "external_estimates": [],
+        "judgments": [{"evidence_refs": ["E1"], "contrary_evidence_refs": ["E2"]}],
+    }
+    if mutation == "wrong_class":
+        artifact["facts"][0]["source_type"] = "COMPANY_CLAIM"
+    elif mutation == "unknown_ref":
+        artifact["judgments"][0]["evidence_refs"] = ["NOPE"]
+    elif mutation == "duplicate":
+        artifact["facts"][1]["evidence_id"] = "E1"
+    elif mutation == "future":
+        artifact["facts"][0]["as_of"] = "2025-01-02T00:00:00Z"
+    else:
+        artifact["facts"].pop()
+    with pytest.raises(SemanticError):
+        validate_evidence(artifact)
 
 
 @pytest.mark.parametrize("bad", [math.nan, math.inf, -math.inf])

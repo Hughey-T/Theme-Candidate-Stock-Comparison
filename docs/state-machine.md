@@ -1,3 +1,5 @@
 # State machine
 
-`initial:1..10` と `update:1..2` のみ。`次`はartifact phaseがcurrent phaseと一致する場合だけatomic writeし、飛越し・逆行・再実行を拒否する。initial complete前の`更新`、update中の`更新`を拒否する。更新には異なるgenerationを要求し履歴は上書きせず新generationへ結び付ける。statusとpersistence statusは独立である。
+`initial:1..10`と`update:1..2`だけを許す。全commandはstate bytes decode、packaged Schema、state semantic、artifact Schema、evidence/phase/cross-phase semantic dispatcher、transition、result Schema/semantic、atomic writeを通る。
+
+Update startはclosed `update-start` metadataとしてnew generation/candidate-set/comparison-as-of/source-cutoff/previous generationを要求する。New cutoffはnew as-of以下、new as-ofはold as-of以降、same generationと暗黙のstale cutoff再利用を拒否する。generation_history entryごとにas-of/cutoff/artifactsを保持し、active stateだけをnew generationへ切替える。

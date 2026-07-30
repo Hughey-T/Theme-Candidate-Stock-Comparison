@@ -14,9 +14,13 @@ runtimeが保証しないものは、sourceの真実性、市場データの完�
 * 共通THEME_BEAR/BASE/BULLからTSR、annualized return、downside/permanent-loss確率を再計算
 * applicability、data state、comparability、dependency root、正規化scoreから5 rankingを再導出
 * hard gateを加点で相殺せず、cash/investment benchmarkとリスク条件からoverall `SELECTION`/`NO_SELECTION`を分離
-* old generation/handoff historyを保持し、update handoffをsupersede
+* 12 Phaseの内部までclosedなpackage-resource Schemaと必須phase semantic dispatcher
+* evidence分類・ID・cutoff・support/contrary referenceの整合性検証
+* generationごとのas-of/cutoffとold generation/handoff historyを保持し、update handoffをsupersede
 * base64のclosed JSON partsをtemporary directoryで生成・復元検証してatomic rename
 * remote integrity verification後だけlatestを更新
+
+Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Runtimeは`importlib.resources`で読み、source checkout、editable install、wheel installの経路差を作りません。rootの`schemas`は同じ正本への参照です。
 
 ## Development
 

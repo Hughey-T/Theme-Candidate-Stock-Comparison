@@ -47,6 +47,8 @@ def validate_scenarios(common: dict[str, float], results: dict[str, Any]) -> Non
         if set(cases) != set(SCENARIOS):
             raise SemanticError(f"scenario mismatch: {candidate_id}")
         expected = 0.0
+        annualized_expected = 0.0
+        expected_months = 0.0
         downside = 0.0
         loss = 0.0
         for name, probability in common.items():
@@ -58,15 +60,28 @@ def validate_scenarios(common: dict[str, float], results: dict[str, Any]) -> Non
                 ):
                     raise SemanticError(f"invalid {field}")
             total_return = (case["target_price"] + case["dividend"]) / case["current_price"] - 1
+            months = case["realization_months"]
+            finite(months, "realization_months")
+            if months <= 0:
+                raise SemanticError("realization_months must be positive")
+            annualized_return = (1 + total_return) ** (12 / months) - 1
             if abs(total_return - case["total_return"]) > 1e-8:
                 raise SemanticError("total return mismatch or dividend double-count")
+            if abs(annualized_return - case["annualized_return"]) > 1e-8:
+                raise SemanticError("annualized return mismatch")
             expected += probability * total_return
+            annualized_expected += probability * annualized_return
+            expected_months += probability * months
             if total_return < 0:
                 downside += probability
             if case["permanent_loss"]:
                 loss += probability
         if abs(expected - result["probability_weighted_return"]) > 1e-8:
             raise SemanticError("probability-weighted return mismatch")
+        if abs(annualized_expected - result["probability_weighted_annualized_return"]) > 1e-8:
+            raise SemanticError("probability-weighted annualized return mismatch")
+        if abs(expected_months - result["expected_realization_months"]) > 1e-8:
+            raise SemanticError("expected realization months mismatch")
         if abs(downside - result["downside_probability"]) > 1e-8:
             raise SemanticError("downside probability mismatch")
         if abs(loss - result["permanent_loss_probability"]) > 1e-8:
@@ -154,3 +169,29 @@ def validate_scores(rows: list[dict[str, Any]]) -> None:
                 raise SemanticError("double counting dependency root")
             if metric["weight"]:
                 dependencies.add(root)
+
+
+def validate_evidence(artifact: dict[str, Any]) -> None:
+    """Validate evidence classification, uniqueness, cutoff and judgment references."""
+    expected_types = {
+        "facts": "FACT",
+        "company_claims": "COMPANY_CLAIM",
+        "external_estimates": "EXTERNAL_ESTIMATE",
+    }
+    evidence: dict[str, dict[str, Any]] = {}
+    cutoff = parse_rfc3339(artifact["source_cutoff_at"])
+    for collection, expected_type in expected_types.items():
+        for item in artifact[collection]:
+            if item["source_type"] != expected_type:
+                raise SemanticError("evidence classification mismatch")
+            evidence_id = item["evidence_id"]
+            if evidence_id in evidence:
+                raise SemanticError("duplicate evidence ID")
+            if parse_rfc3339(item["as_of"]) > cutoff:
+                raise SemanticError("future evidence")
+            evidence[evidence_id] = item
+    for judgment in artifact["judgments"]:
+        for field in ("evidence_refs", "contrary_evidence_refs"):
+            refs = judgment[field]
+            if not refs or any(ref not in evidence for ref in refs):
+                raise SemanticError("unknown or empty evidence reference")

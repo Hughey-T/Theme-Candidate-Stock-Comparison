@@ -12,14 +12,41 @@ from pathlib import Path, PurePosixPath
 from typing import Any
 
 from .constants import MAX_PART_BYTES, PERSISTENCE, SCHEMA_VERSION
-from .models import SemanticError, canonical_bytes, canonical_hash
+from .models import SemanticError, canonical_bytes, canonical_hash, parse_rfc3339
+from .schema_runtime import validate_document
 
 
-def transition_persistence(current: str, target: str) -> str:
+def transition_persistence(
+    current: str,
+    target: str,
+    *,
+    failure_reason: str | None = None,
+    failed_at: str | None = None,
+    failed_stage: str | None = None,
+) -> str:
+    if current == "failed_terminal":
+        raise SemanticError("failed_terminal cannot transition")
+    if target == "failed_terminal":
+        if current == "integrity_verified" or not all((failure_reason, failed_at, failed_stage)):
+            raise SemanticError("invalid terminal failure transition")
+        parse_rfc3339(failed_at or "")
+        return target
     path = PERSISTENCE[:4]
     if current not in path or target not in path or path.index(target) != path.index(current) + 1:
         raise SemanticError("invalid persistence transition")
     return target
+
+
+def terminal_failure(current: str, reason: str, failed_at: str, stage: str) -> dict[str, str]:
+    status = transition_persistence(
+        current, "failed_terminal", failure_reason=reason, failed_at=failed_at, failed_stage=stage
+    )
+    return {
+        "verification_status": status,
+        "failure_reason": reason,
+        "failed_at": failed_at,
+        "failed_stage": stage,
+    }
 
 
 def split_payload(
@@ -92,6 +119,19 @@ def publish(root: Path, payload: dict[str, Any], context: dict[str, str]) -> dic
 
 
 def reconstruct(directory: Path, manifest: dict[str, Any]) -> dict[str, Any]:
+    manifest_path = directory / "manifest.json"
+    if manifest_path.is_symlink() or not manifest_path.is_file():
+        raise SemanticError("manifest missing or symlinked")
+    disk_bytes = manifest_path.read_bytes()
+    disk_manifest = json.loads(disk_bytes)
+    validate_document("publication-manifest", disk_manifest)
+    if disk_bytes != canonical_bytes(manifest) or disk_manifest != manifest:
+        raise SemanticError("on-disk manifest mismatch")
+    if (
+        not directory.name.startswith(f".{manifest['generation_id']}-")
+        and directory.name != manifest["generation_id"]
+    ):
+        raise SemanticError("manifest/directory generation mismatch")
     inventory = manifest["inventory"]
     paths = [item["path"] for item in inventory]
     sequences = [item["sequence"] for item in inventory]
@@ -101,8 +141,8 @@ def reconstruct(directory: Path, manifest: dict[str, Any]) -> dict[str, Any]:
         raise SemanticError("part order/gap")
     expected_files = set(paths) | {"manifest.json"}
     actual_files = {entry.name for entry in directory.iterdir()}
-    if actual_files - expected_files:
-        raise SemanticError("unknown file in generation")
+    if actual_files != expected_files:
+        raise SemanticError("generation inventory does not exactly match files")
     chunks = []
     for item in inventory:
         pure = PurePosixPath(item["path"])

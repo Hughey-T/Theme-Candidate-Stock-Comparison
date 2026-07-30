@@ -1,5 +1,5 @@
 # Publication contract
 
-Temporary generation directoryへ全base64 closed JSON partとmanifestを書き、exact inventory、part envelope/hash、reconstruction/canonical hashを検証後にatomic renameする。失敗時temporary directoryを除去する。absolute/path traversal/symlink、unknown file、duplicate path/sequence、part count/generation、raw/canonical hash不一致を拒否する。
+Temporary generation directoryへ全base64 closed JSON partとmanifestを書き、on-disk manifest Schema/canonical bytes、actual filesとexact inventoryの集合一致、part envelope/hash、reconstruction/canonical hashを検証後にatomic renameする。missing/modified manifest、absolute/path traversal/symlink、missing/unknown file、duplicate path/sequence、part count/generation、raw/canonical hash不一致を拒否する。
 
-Persistenceはnot_generated→generated_not_persisted→persisted_pending_verification→integrity_verifiedの隣接遷移だけを許す。remote bytes検証済みのintegrity_verified manifestだけがlatestをatomic更新できる。local publicationとremote publicationを混同しない。
+Persistenceはnot_generated→generated_not_persisted→persisted_pending_verification→integrity_verifiedの隣接遷移と、verified前の各状態→failed_terminalを許す。Terminal failureはreason/failed_at/stage必須、復帰不可、integrity_verifiedからterminalへの降格不可。remote integrity verifiedだけがlatestを更新できる。

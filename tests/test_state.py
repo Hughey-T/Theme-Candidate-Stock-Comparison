@@ -3,18 +3,7 @@ import pytest
 from theme_compare.models import SemanticError
 from theme_compare.state import StateMachine
 
-PHASE_FIELDS = {
-    1: "session_and_candidates",
-    2: "business_models",
-    3: "theme_value_capture",
-    4: "competitive_structure",
-    5: "financial_conversion",
-    6: "valuation_expectations",
-    7: "common_scenarios",
-    8: "catalysts",
-    9: "risks_and_stress",
-    10: "final_selection",
-}
+from phase_fixtures import SET_ID, TS, artifact
 
 
 def initial():
@@ -25,10 +14,17 @@ def initial():
         "active_generation_id": "g1",
         "initial_generation_id": "g1",
         "previous_generation_id": None,
-        "generation_history": {"g1": {"candidate_set_id": "cs", "artifacts": []}},
-        "candidate_set_id": "cs",
-        "comparison_as_of": "2025-01-01T00:00:00Z",
-        "source_cutoff_at": "2025-01-01T00:00:00Z",
+        "generation_history": {
+            "g1": {
+                "candidate_set_id": SET_ID,
+                "comparison_as_of": TS,
+                "source_cutoff_at": TS,
+                "artifacts": [],
+            }
+        },
+        "candidate_set_id": SET_ID,
+        "comparison_as_of": TS,
+        "source_cutoff_at": TS,
         "current_phase": 1,
         "completed_phases": [],
         "status": "in_progress",
@@ -36,26 +32,6 @@ def initial():
         "handoff_history": {},
         "active_handoff_id": None,
         "superseded_handoff_ids": [],
-    }
-
-
-def artifact(phase, generation="g1", mode="initial"):
-    field = (
-        PHASE_FIELDS[phase]
-        if mode == "initial"
-        else ("update_diff" if phase == 1 else "updated_selection")
-    )
-    return {
-        "mode": mode,
-        "phase": phase,
-        "generation_id": generation,
-        "candidate_set_id": "cs",
-        "source_cutoff_at": "2025-01-01T00:00:00Z",
-        "facts": [],
-        "company_claims": [],
-        "external_estimates": [],
-        "judgments": [],
-        "payload": {field: {}, "summary": "complete"},
     }
 
 
@@ -84,14 +60,49 @@ def test_update_two_phases_preserves_generation(tmp_path):
     sm = machine(tmp_path)
     for phase in range(1, 11):
         sm.command("次", artifact(phase))
-    state = sm.command("更新", {"generation_id": "g2", "candidate_set_id": "cs"})
+    state = sm.command(
+        "更新",
+        {
+            "new_generation_id": "g2",
+            "new_candidate_set_id": SET_ID,
+            "new_comparison_as_of": "2025-02-01T00:00:00Z",
+            "new_source_cutoff_at": "2025-01-31T00:00:00Z",
+            "previous_generation_id": "g1",
+        },
+    )
     assert (
         set(state["generation_history"]) == {"g1", "g2"}
         and len(state["generation_history"]["g1"]["artifacts"]) == 10
     )
-    sm.command("次", artifact(1, "g2", "update"))
-    sm.command("次", artifact(2, "g2", "update"))
+    sm.command("次", artifact(1, "g2", "update", "2025-01-31T00:00:00Z"))
+    sm.command("次", artifact(2, "g2", "update", "2025-01-31T00:00:00Z"))
     assert sm.load()["status"] == "complete"
+
+
+@pytest.mark.parametrize(
+    "mutation", ["same_generation", "stale_cutoff", "future_cutoff", "old_comparison"]
+)
+def test_update_start_contract_rejects_invalid_metadata(tmp_path, mutation):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    metadata = {
+        "new_generation_id": "g2",
+        "new_candidate_set_id": SET_ID,
+        "new_comparison_as_of": "2025-02-01T00:00:00Z",
+        "new_source_cutoff_at": "2025-01-31T00:00:00Z",
+        "previous_generation_id": "g1",
+    }
+    if mutation == "same_generation":
+        metadata["new_generation_id"] = "g1"
+    elif mutation == "stale_cutoff":
+        metadata["new_source_cutoff_at"] = TS
+    elif mutation == "future_cutoff":
+        metadata["new_source_cutoff_at"] = "2025-03-01T00:00:00Z"
+    else:
+        metadata["new_comparison_as_of"] = "2024-12-01T00:00:00Z"
+    with pytest.raises(SemanticError):
+        sm.command("更新", metadata)
 
 
 def test_interrupted_resume_reads_disk(tmp_path):

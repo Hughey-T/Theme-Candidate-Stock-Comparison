@@ -1,4 +1,5 @@
 import copy
+import json
 import pytest
 from theme_compare.models import SemanticError
 from theme_compare.publication import (
@@ -6,6 +7,7 @@ from theme_compare.publication import (
     reconstruct,
     split_payload,
     transition_persistence,
+    terminal_failure,
     update_latest,
 )
 
@@ -78,6 +80,31 @@ def test_unknown_file_and_symlink_rejected(tmp_path):
         reconstruct(directory, manifest)
 
 
+@pytest.mark.parametrize(
+    "mutation", ["missing_manifest", "modified_manifest", "inventory_removed", "schema_invalid"]
+)
+def test_manifest_is_loaded_and_verified_from_disk(tmp_path, mutation):
+    manifest = publish(tmp_path, {"x": 1}, context())
+    directory = tmp_path / "generations/g1"
+    path = directory / "manifest.json"
+    if mutation == "missing_manifest":
+        path.unlink()
+    elif mutation == "modified_manifest":
+        value = json.loads(path.read_text())
+        value["canonical_sha256"] = "0" * 64
+        path.write_text(json.dumps(value))
+    elif mutation == "inventory_removed":
+        value = json.loads(path.read_text())
+        value["inventory"] = []
+        path.write_text(json.dumps(value))
+    else:
+        value = json.loads(path.read_text())
+        value["unknown"] = True
+        path.write_text(json.dumps(value))
+    with pytest.raises(SemanticError):
+        reconstruct(directory, manifest)
+
+
 def test_oversized_requested_part_rejected():
     with pytest.raises(SemanticError):
         split_payload({"x": 1}, "g", 999999)
@@ -118,3 +145,22 @@ def test_persistence_lifecycle_and_latest(tmp_path):
         transition_persistence(status, status)
     with pytest.raises(SemanticError):
         update_latest(tmp_path, {**manifest, "verification_status": "generated_not_persisted"})
+
+
+def test_terminal_failure_requires_metadata_and_cannot_recover():
+    record = terminal_failure(
+        "generated_not_persisted", "hash mismatch", "2025-01-01T00:00:00Z", "remote_verify"
+    )
+    assert record["verification_status"] == "failed_terminal"
+    with pytest.raises(SemanticError):
+        transition_persistence("failed_terminal", "not_generated")
+    with pytest.raises(SemanticError):
+        transition_persistence(
+            "integrity_verified",
+            "failed_terminal",
+            failure_reason="x",
+            failed_at="2025-01-01T00:00:00Z",
+            failed_stage="x",
+        )
+    with pytest.raises(SemanticError):
+        transition_persistence("not_generated", "failed_terminal")

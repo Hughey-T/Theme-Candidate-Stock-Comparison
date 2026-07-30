@@ -17,6 +17,12 @@ theme-compare = "theme_compare.cli:main"
 [tool.hatch.build.targets.wheel]
 packages = ["src/theme_compare"]
 
+[tool.hatch.build]
+include = ["src/theme_compare/schemas/*.schema.json"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/theme_compare/schemas" = "theme_compare/schemas"
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 

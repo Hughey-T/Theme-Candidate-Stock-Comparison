@@ -79,6 +79,25 @@
         "integrity_verified",
         "failed_terminal"
       ]
+    },
+    "failure_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "failed_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "failed_stage": {
+      "type": [
+        "string",
+        "null"
+      ]
     }
   },
   "required": [

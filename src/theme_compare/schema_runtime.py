@@ -1,24 +1,23 @@
-"""Mandatory in-process JSON Schema validation for runtime boundaries."""
+"""Mandatory in-process JSON Schema validation using packaged resources."""
 
 from __future__ import annotations
-
 import json
-from pathlib import Path
+from importlib.resources import files
 from typing import Any
-
 from jsonschema import Draft202012Validator, FormatChecker
-
 from .models import SemanticError
 
-SCHEMA_ROOT = Path(__file__).parents[2] / "schemas"
+
+def schema_bytes(name: str) -> bytes:
+    return files("theme_compare.schemas").joinpath(f"{name}.schema.json").read_bytes()
 
 
 def validate_document(name: str, document: Any) -> None:
-    schema = json.loads((SCHEMA_ROOT / f"{name}.schema.json").read_text())
+    schema = json.loads(schema_bytes(name))
     errors = sorted(
         Draft202012Validator(schema, format_checker=FormatChecker()).iter_errors(document),
-        key=lambda error: list(error.absolute_path),
+        key=lambda e: list(e.absolute_path),
     )
     if errors:
-        location = "/".join(str(item) for item in errors[0].absolute_path)
+        location = "/".join(str(x) for x in errors[0].absolute_path)
         raise SemanticError(f"{name} schema violation at {location}: {errors[0].message}")

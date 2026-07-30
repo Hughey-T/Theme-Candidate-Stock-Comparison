@@ -1,14 +1,14 @@
 # Compliance matrix
 
-| Requirement | Implementation | Schema | Executable tests |
+| Requirement | Implementation | Contract | Executable tests |
 |---|---|---|---|
-| RFC3339 UTC instant | `models.parse_rfc3339`, `validate_envelope` | datetime pattern/format | offset/future/timezone tests |
-| Canonical candidate identity | `models.candidate_set_id` | candidate schemas | seven identity mutations/order test |
-| 12 closed Phase contracts | `schema_runtime`, `StateMachine.command` | phase-artifact oneOf/session embedded items | payload swap/unknown/malformed judgment |
-| Five derived rankings | `ranking.derive_rankings/validate_stored_rankings` | ranking | score/order/tie/coverage mutations |
-| Scenario/horizon returns | `engine.derive_scenario_results` | common scenario | TSR/annualization/zero months |
-| Selection/NO_SELECTION | `engine.select_from_analysis`, `validate_selection` | final-selection/handoff | hard gate/no-selection/selection mutations |
-| Update/history/handoff | `StateMachine`, `engine.update_diff` | state/update-diff/handoff | generation preservation/nested ID diff/supersession |
-| Atomic publication | `publication.publish/reconstruct` | publication manifest | UTF-8, retry, unknown/traversal/duplicate/hash mutations |
-| Persistence/latest | `transition_persistence/update_latest` | persistence enum | skip/repeat/unverified latest tests |
-| Reproducible CI | `constraints-dev.txt`, workflow | regenerated Schema | full matrix/quality/fresh clone jobs |
+| Packaged schemas | `schema_runtime.schema_bytes` | package data + generator | wheel outside-checkout CI, regeneration test |
+| 12 closed Phase payloads | generator `phase_contracts` | phase-artifact `oneOf` | recursive closure, 12 valid, unknown/empty/wrong payload tests |
+| Mandatory phase semantics | `phase_validation.validate_phase_artifact`, `StateMachine.command` | state/phase schemas | 10+2 E2E and mutation tests |
+| UTC/as-of update | `parse_rfc3339`, update-start handling | update-start/session-state | offset, stale/same generation, new cutoff E2E |
+| Evidence integrity | `validate_evidence` | const-classified evidence items | wrong class/reference/duplicate/future/removal mutations |
+| Scenario derivation | `validate_scenarios` | Phase 7/10 scenario result | annualized/weighted/month mutations |
+| Ranking and selection | ranking + Phase 10 dispatcher | Phase 10 atomic metrics/rankings/selection | score/order/gate/NO_SELECTION mutations |
+| Exact publication | `publish/reconstruct` | publication manifest | missing/modified manifest, missing/extra/duplicate/path/hash tests |
+| Persistence failure | transition/terminal_failure/latest | manifest status/failure metadata | invalid transition and latest tests |
+| Reproducible CI | constraints + workflow | generated resources | 3.11–3.13, quality, schema/mutation, wheel E2E |

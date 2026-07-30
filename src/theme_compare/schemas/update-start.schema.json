@@ -1,0 +1,36 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "new_generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "new_candidate_set_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "new_comparison_as_of": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "new_source_cutoff_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "previous_generation_id": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "new_generation_id",
+    "new_candidate_set_id",
+    "new_comparison_as_of",
+    "new_source_cutoff_at",
+    "previous_generation_id"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

@@ -132,13 +132,16 @@
       ]
     },
     "ranking_by_horizon": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true
     },
     "common_scenarios": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true
     },
     "company_scenario_results": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true
     },
     "key_assumptions": {
       "type": "array"
@@ -147,19 +150,24 @@
       "type": "array"
     },
     "company_specific_risks": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true
     },
     "catalysts": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true
     },
     "valuation_ranges": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true
     },
     "thesis_invalidation_conditions": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true
     },
     "confidence": {
-      "type": "object"
+      "type": "object",
+      "additionalProperties": true
     },
     "evidence_manifest": {
       "type": "array"
