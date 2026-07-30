@@ -1,3 +1,3 @@
 # Test matrix
 
-Schema/type、候補追加削除順序/identity、comparability/data-state、scenario probability/price/share/dividend/permanent loss、ranking/hard gate/NO_SELECTION、generation/time、publication mutations、state replay/skip/resume/updateをpytestで実行する。代表mutationはcandidate set、probability、hash、part metadata、generation、phaseを実データ改変して失敗を確認する。CIは3.11/3.12/3.13 unit matrixに加えlint/type/schema/mutation/integration/fresh-clone E2E jobを持つ。
+Schema/type、12-way Phase discriminator、malformed judgment、candidate全identity mutation、offset時系列、scenario/annualization、5 ranking score/order/tie/coverage、selection mutation、nested diff、generation/handoff history、UTF-8/base64 parts、atomic retry、exact inventory/path safety、persistence/latestをunit/mutation/integration testで検証する。CIはconstraintsでtoolを固定しPython 3.11/3.12/3.13 full pytest、quality、Schema regeneration/sample validation、fresh-clone E2Eを実行する。

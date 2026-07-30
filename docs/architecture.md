@@ -1,3 +1,5 @@
-# Architecture
+# Architecture and responsibility
 
-入力 → closed Schema → semantic validator → persisted StateMachine → one Phase artifact → immutable publisher、の一方向構成である。Phase開始時にstateと既存artifactsをdiskから再取得し envelopeを検証する。Phase 7が共通 THEME_BEAR/BASE/BULL を固定し、Phase 10が入力値から期待値・損失確率・順位・分類を再導出してhandoffを作る。latestは便宜的pointerに過ぎず、開始後は固定generation directoryだけを読む。
+正本は選択肢A（validator/persistence runtime）である。Custom GPTが各Phaseのevidence分類、judgments、phase payloadを生成する。runtimeは `read bytes → JSON decode → JSON Schema → semantic validation → transition → atomic write` を行う。市場data adapter、LLM呼出、分析文章生成、source内容の真偽判定は対象外である。
+
+Initial generationは10 artifacts、update generationは2 artifactsを持ち、generation_historyを上書きしない。Phase 7の共通scenario値からreturnを、atomic metricsから5 rankingsを、benchmarks/hard gates/risk limitsからoverall decisionと最大2候補を再導出する。publicationはbase64 closed part、exact inventory、hash、atomic generation rename、明示的persistence lifecycleを使用する。

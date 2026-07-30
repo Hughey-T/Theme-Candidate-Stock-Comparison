@@ -1,9 +1,12 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
   "properties": {
     "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "handoff_id": {
       "type": "string",
       "minLength": 1
     },
@@ -33,8 +36,44 @@
       "format": "date-time",
       "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
     },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "status": {
+      "enum": [
+        "active",
+        "superseded",
+        "invalidated"
+      ]
+    },
+    "supersedes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "superseded_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "invalidated_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "invalidation_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
     "investment_horizon": {
-      "$schema": "https://json-schema.org/draft/2020-12/schema",
       "type": "object",
       "additionalProperties": false,
       "properties": {
@@ -86,8 +125,11 @@
       },
       "uniqueItems": true
     },
-    "no_selection": {
-      "type": "boolean"
+    "overall_decision": {
+      "enum": [
+        "SELECTION",
+        "NO_SELECTION"
+      ]
     },
     "ranking_by_horizon": {
       "type": "object"
@@ -129,19 +171,26 @@
   },
   "required": [
     "schema_version",
+    "handoff_id",
     "session_id",
     "generation_id",
     "candidate_set_id",
     "theme",
     "comparison_as_of",
     "source_cutoff_at",
+    "created_at",
+    "status",
+    "supersedes",
+    "superseded_by",
+    "invalidated_at",
+    "invalidation_reason",
     "investment_horizon",
     "primary_candidate",
     "secondary_candidate",
     "conditional_candidates",
     "watch_candidates",
     "excluded_candidates",
-    "no_selection",
+    "overall_decision",
     "ranking_by_horizon",
     "common_scenarios",
     "company_scenario_results",
@@ -154,5 +203,6 @@
     "confidence",
     "evidence_manifest",
     "recommended_next_action"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

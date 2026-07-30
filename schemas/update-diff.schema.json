@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -14,22 +13,34 @@
     "changes": {
       "type": "array",
       "items": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "field": {
+          "path": {
             "type": "string",
             "minLength": 1
           },
           "before": {},
           "after": {},
           "change": {
-            "const": "changed"
+            "enum": [
+              "added",
+              "removed",
+              "changed",
+              "classification_changed",
+              "ranking_changed",
+              "evidence_added",
+              "evidence_removed",
+              "assumption_changed",
+              "invalidation_triggered",
+              "comparability_changed",
+              "candidate_added",
+              "candidate_removed"
+            ]
           }
         },
         "required": [
-          "field",
+          "path",
           "before",
           "after",
           "change"
@@ -46,5 +57,6 @@
     "new_generation_id",
     "changes",
     "invalidated_handoff"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

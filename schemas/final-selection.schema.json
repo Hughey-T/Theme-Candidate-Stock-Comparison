@@ -1,60 +1,47 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
   "properties": {
-    "candidate_id": {
-      "type": "string",
-      "minLength": 1
+    "classifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "classification": {
+            "enum": [
+              "PRIMARY",
+              "SECONDARY",
+              "CONDITIONAL",
+              "WATCH",
+              "EXCLUDED"
+            ]
+          }
+        },
+        "required": [
+          "candidate_id",
+          "classification"
+        ]
+      }
     },
-    "classification": {
+    "overall_decision": {
       "enum": [
-        "PRIMARY",
-        "SECONDARY",
-        "CONDITIONAL",
-        "WATCH",
-        "EXCLUDED",
+        "SELECTION",
         "NO_SELECTION"
       ]
     },
     "hard_gates": {
-      "type": "array",
-      "items": {
-        "enum": [
-          "weak_theme_link",
-          "unreliable_financials",
-          "insufficient_verifiability",
-          "going_concern",
-          "unclear_liquidity",
-          "major_dilution",
-          "illiquid",
-          "unevaluable_share_structure",
-          "bull_case_priced_in",
-          "clear_competitive_disadvantage",
-          "thesis_already_invalidated",
-          "portfolio_loss_policy_breach"
-        ]
-      },
-      "uniqueItems": true
-    },
-    "reason": {
-      "type": "string",
-      "minLength": 1
-    },
-    "contrary_evidence_refs": {
-      "type": "array",
-      "items": {
-        "type": "string",
-        "minLength": 1
-      },
-      "minItems": 1
+      "type": "object"
     }
   },
   "required": [
-    "candidate_id",
-    "classification",
-    "hard_gates",
-    "reason",
-    "contrary_evidence_refs"
-  ]
+    "classifications",
+    "overall_decision",
+    "hard_gates"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }

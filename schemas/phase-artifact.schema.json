@@ -1,51 +1,2645 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "type": "object",
-  "additionalProperties": false,
-  "properties": {
-    "phase": {
-      "type": "integer",
-      "minimum": 1,
-      "maximum": 10
+  "oneOf": [
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 1
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "session_and_candidates": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "session_and_candidates",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
     },
-    "generation_id": {
-      "type": "string",
-      "minLength": 1
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 2
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "business_models": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "business_models",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
     },
-    "candidate_set_id": {
-      "type": "string",
-      "minLength": 1
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 3
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "theme_value_capture": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "theme_value_capture",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
     },
-    "source_cutoff_at": {
-      "type": "string",
-      "format": "date-time",
-      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 4
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "competitive_structure": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "competitive_structure",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
     },
-    "facts": {
-      "type": "array"
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 5
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "financial_conversion": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "financial_conversion",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
     },
-    "company_claims": {
-      "type": "array"
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 6
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "valuation_expectations": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "valuation_expectations",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
     },
-    "external_estimates": {
-      "type": "array"
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 7
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "common_scenarios": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "common_scenarios",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
     },
-    "judgments": {
-      "type": "array"
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 8
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "catalysts": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "catalysts",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
     },
-    "payload": {
-      "type": "object"
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 9
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "risks_and_stress": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "risks_and_stress",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "initial"
+        },
+        "phase": {
+          "const": 10
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "final_selection": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "final_selection",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "update"
+        },
+        "phase": {
+          "const": 1
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "update_diff": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "update_diff",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
+    },
+    {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "const": "update"
+        },
+        "phase": {
+          "const": 2
+        },
+        "generation_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "candidate_set_id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "source_cutoff_at": {
+          "type": "string",
+          "format": "date-time",
+          "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+        },
+        "facts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "company_claims": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "external_estimates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "evidence_id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "statement": {
+                "type": "string",
+                "minLength": 1
+              },
+              "source_type": {
+                "enum": [
+                  "FACT",
+                  "COMPANY_CLAIM",
+                  "EXTERNAL_ESTIMATE"
+                ]
+              },
+              "as_of": {
+                "type": "string",
+                "format": "date-time",
+                "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+              }
+            },
+            "required": [
+              "evidence_id",
+              "statement",
+              "source_type",
+              "as_of"
+            ]
+          }
+        },
+        "judgments": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "judgment": {
+                "type": "string",
+                "minLength": 1
+              },
+              "evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "contrary_evidence_refs": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1,
+                "uniqueItems": true
+              },
+              "confidence": {
+                "enum": [
+                  "low",
+                  "medium",
+                  "high"
+                ]
+              },
+              "assumptions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "invalidation_conditions": {
+                "type": "array",
+                "items": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "minItems": 1
+              }
+            },
+            "required": [
+              "judgment",
+              "evidence_refs",
+              "contrary_evidence_refs",
+              "confidence",
+              "assumptions",
+              "invalidation_conditions"
+            ]
+          }
+        },
+        "payload": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "updated_selection": {
+              "type": "object"
+            },
+            "summary": {
+              "type": "string",
+              "minLength": 1
+            }
+          },
+          "required": [
+            "updated_selection",
+            "summary"
+          ]
+        }
+      },
+      "required": [
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload"
+      ]
     }
-  },
-  "required": [
-    "phase",
-    "generation_id",
-    "candidate_set_id",
-    "source_cutoff_at",
-    "facts",
-    "company_claims",
-    "external_estimates",
-    "judgments",
-    "payload"
   ]
 }

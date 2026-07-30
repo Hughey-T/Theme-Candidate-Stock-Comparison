@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 
 from .constants import HARD_GATES, SCENARIOS
-from .models import SemanticError, candidate_set_id, finite, require_rfc3339
+from .models import SemanticError, candidate_set_id, finite, parse_rfc3339, require_rfc3339
 
 
 def validate_candidates(candidates: list[dict[str, Any]], declared_set_id: str) -> None:
@@ -89,23 +89,42 @@ def validate_selection(payload: dict[str, Any]) -> None:
         if gates and candidate_id not in excluded:
             raise SemanticError("hard gate cannot be offset by score")
     primary = [x["candidate_id"] for x in classifications if x["classification"] == "PRIMARY"]
-    eligible_ranking = [x for x in payload["ranking"] if x not in excluded]
-    expected_primary = eligible_ranking[:1] if payload["absolute_attractiveness"] else []
+    risk_ineligible = set(payload.get("risk_ineligible", []))
+    eligible_ranking = [x for x in payload["ranking"] if x not in excluded | risk_ineligible]
+    returns = payload["annualized_expected_returns"]
+    benchmark = payload["annualized_benchmark_return"]
+    recomputed_attractive = bool(eligible_ranking and returns[eligible_ranking[0]] > benchmark)
+    expected_primary = eligible_ranking[:1] if recomputed_attractive else []
     if primary != expected_primary:
         raise SemanticError("ranking/winner/no-selection mismatch")
-    if payload["no_selection"] != (not payload["absolute_attractiveness"]):
+    if payload["absolute_attractiveness"] != recomputed_attractive:
+        raise SemanticError("absolute attractiveness mismatch")
+    if payload["no_selection"] != (not recomputed_attractive):
         raise SemanticError("NO_SELECTION flag mismatch")
+    expected_decision = "NO_SELECTION" if payload["no_selection"] else "SELECTION"
+    if payload.get("overall_decision") != expected_decision:
+        raise SemanticError("overall decision mismatch")
     if payload["no_selection"] and selected:
         raise SemanticError("NO_SELECTION cannot have handoff candidates")
     for judgment in payload["judgments"]:
         if not judgment["evidence_refs"] or not judgment["contrary_evidence_refs"]:
             raise SemanticError("judgment requires evidence and contrary evidence")
+    expected_secondary = (
+        [candidate for candidate in eligible_ranking[1:] if returns[candidate] > benchmark][:1]
+        if recomputed_attractive
+        else []
+    )
+    actual_secondary = [
+        x["candidate_id"] for x in classifications if x["classification"] == "SECONDARY"
+    ]
+    if actual_secondary != expected_secondary:
+        raise SemanticError("secondary mismatch")
 
 
 def validate_envelope(envelope: dict[str, Any]) -> None:
-    require_rfc3339(envelope["comparison_as_of"])
-    require_rfc3339(envelope["source_cutoff_at"])
-    if envelope["source_cutoff_at"] > envelope["comparison_as_of"]:
+    comparison = parse_rfc3339(envelope["comparison_as_of"])
+    cutoff = parse_rfc3339(envelope["source_cutoff_at"])
+    if cutoff > comparison:
         raise SemanticError("future information detected")
     generation = envelope["generation_id"]
     candidate_set = envelope["candidate_set_id"]

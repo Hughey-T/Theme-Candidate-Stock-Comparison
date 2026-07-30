@@ -1,7 +1,13 @@
+import copy
 import pytest
-
 from theme_compare.models import SemanticError
-from theme_compare.publication import publish, reconstruct, split_payload
+from theme_compare.publication import (
+    publish,
+    reconstruct,
+    split_payload,
+    transition_persistence,
+    update_latest,
+)
 
 
 def context():
@@ -13,17 +19,35 @@ def context():
     }
 
 
-def test_split_publish_reconstruct(tmp_path):
-    payload = {"value": "x" * 1000}
+def test_utf8_safe_atomic_publish_reconstruct(tmp_path):
+    payload = {"value": "株式🚀" * 20000}
     manifest = publish(tmp_path, payload, context())
-    assert len(manifest["inventory"]) == 1
-    assert reconstruct(tmp_path / "generations/g1", manifest) == payload
+    assert (
+        len(manifest["inventory"]) > 1
+        and reconstruct(tmp_path / "generations/g1", manifest) == payload
+    )
+    assert not (tmp_path / "latest").exists()
+    for item in manifest["inventory"]:
+        __import__("json").loads((tmp_path / "generations/g1" / item["path"]).read_text())
 
 
-@pytest.mark.parametrize("mutation", ["hash", "order", "count", "generation", "missing"])
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "hash",
+        "order",
+        "count",
+        "generation",
+        "missing",
+        "duplicate_path",
+        "duplicate_sequence",
+        "traversal",
+    ],
+)
 def test_publication_mutations(tmp_path, mutation):
     manifest = publish(tmp_path, {"value": "x" * 100}, context())
     item = manifest["inventory"][0]
+    directory = tmp_path / "generations/g1"
     if mutation == "hash":
         item["raw_sha256"] = "0" * 64
     elif mutation == "order":
@@ -32,10 +56,26 @@ def test_publication_mutations(tmp_path, mutation):
         item["part_count"] = 2
     elif mutation == "generation":
         item["generation_id"] = "g2"
-    else:
-        (tmp_path / "generations/g1" / item["path"]).unlink()
+    elif mutation == "missing":
+        (directory / item["path"]).unlink()
+    elif mutation == "duplicate_path":
+        manifest["inventory"].append(copy.deepcopy(item))
+    elif mutation == "duplicate_sequence":
+        duplicate = copy.deepcopy(item)
+        duplicate["path"] = "other.json"
+        manifest["inventory"].append(duplicate)
+    elif mutation == "traversal":
+        item["path"] = "../outside.json"
     with pytest.raises((SemanticError, FileNotFoundError)):
-        reconstruct(tmp_path / "generations/g1", manifest)
+        reconstruct(directory, manifest)
+
+
+def test_unknown_file_and_symlink_rejected(tmp_path):
+    manifest = publish(tmp_path, {"x": 1}, context())
+    directory = tmp_path / "generations/g1"
+    (directory / "unknown").write_text("x")
+    with pytest.raises(SemanticError, match="unknown"):
+        reconstruct(directory, manifest)
 
 
 def test_oversized_requested_part_rejected():
@@ -47,3 +87,34 @@ def test_generation_is_immutable(tmp_path):
     publish(tmp_path, {"x": 1}, context())
     with pytest.raises(SemanticError):
         publish(tmp_path, {"x": 2}, context())
+
+
+def test_failed_publication_is_removed_and_retryable(tmp_path, monkeypatch):
+    import theme_compare.publication as module
+
+    original = module.reconstruct
+    monkeypatch.setattr(
+        module, "reconstruct", lambda *_: (_ for _ in ()).throw(SemanticError("boom"))
+    )
+    with pytest.raises(SemanticError):
+        publish(tmp_path, {"x": 1}, context())
+    assert not (tmp_path / "generations/g1").exists()
+    monkeypatch.setattr(module, "reconstruct", original)
+    publish(tmp_path, {"x": 1}, context())
+
+
+def test_persistence_lifecycle_and_latest(tmp_path):
+    status = "not_generated"
+    for target in (
+        "generated_not_persisted",
+        "persisted_pending_verification",
+        "integrity_verified",
+    ):
+        status = transition_persistence(status, target)
+    manifest = {**context(), "verification_status": status}
+    update_latest(tmp_path, manifest)
+    assert (tmp_path / "latest").read_text().strip() == "g1"
+    with pytest.raises(SemanticError):
+        transition_persistence(status, status)
+    with pytest.raises(SemanticError):
+        update_latest(tmp_path, {**manifest, "verification_status": "generated_not_persisted"})

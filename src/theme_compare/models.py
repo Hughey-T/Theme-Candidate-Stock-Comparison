@@ -6,7 +6,7 @@ import hashlib
 import json
 import math
 import re
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 
 
@@ -14,13 +14,21 @@ class SemanticError(ValueError):
     """An artifact is structurally valid but semantically unsafe."""
 
 
-def require_rfc3339(value: str) -> None:
+def parse_rfc3339(value: str) -> datetime:
+    """Parse an RFC 3339 instant and normalize it to UTC."""
     if not re.search(r"(Z|[+-]\d\d:\d\d)$", value):
         raise SemanticError(f"timezone required: {value}")
     try:
-        datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
     except ValueError as exc:
         raise SemanticError(f"invalid RFC3339 timestamp: {value}") from exc
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise SemanticError(f"timezone required: {value}")
+    return parsed.astimezone(UTC)
+
+
+def require_rfc3339(value: str) -> None:
+    parse_rfc3339(value)
 
 
 def canonical_bytes(value: Any) -> bytes:
@@ -38,5 +46,22 @@ def finite(value: float, name: str) -> None:
 
 def candidate_set_id(candidates: list[dict[str, Any]]) -> str:
     """Order-independent ID; identity changes cannot silently retain the set ID."""
-    identities = sorted(c["candidate_id"] for c in candidates)
+    fields = (
+        "candidate_id",
+        "issuer_id",
+        "issuer_name",
+        "ticker",
+        "exchange",
+        "share_class",
+        "is_adr",
+        "underlying_security_id",
+        "listing_country",
+    )
+    identities = []
+    for candidate in candidates:
+        identity = {field: candidate[field] for field in fields}
+        identity["former_tickers"] = sorted(candidate["former_tickers"])
+        identity["corporate_action_lineage"] = sorted(candidate["corporate_action_lineage"])
+        identities.append(identity)
+    identities.sort(key=canonical_hash)
     return "cs_" + canonical_hash(identities)[:24]

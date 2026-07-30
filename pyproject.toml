@@ -6,10 +6,10 @@ build-backend = "hatchling.build"
 name = "theme-candidate-stock-comparison"
 version = "1.0.0"
 requires-python = ">=3.11"
-dependencies = ["jsonschema>=4.21"]
+dependencies = ["jsonschema>=4.21,<5"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8", "ruff>=0.6", "mypy>=1.10", "types-jsonschema"]
+dev = ["pytest>=8,<10", "ruff==0.15.12", "mypy>=1.10,<2", "types-jsonschema"]
 
 [project.scripts]
 theme-compare = "theme_compare.cli:main"

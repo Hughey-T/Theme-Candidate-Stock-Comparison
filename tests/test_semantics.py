@@ -7,7 +7,12 @@ import pytest
 
 from theme_compare.engine import classify, derive_scenario_results, update_diff
 from theme_compare.models import SemanticError
-from theme_compare.validation import validate_candidates, validate_envelope, validate_scores
+from theme_compare.validation import (
+    validate_candidates,
+    validate_envelope,
+    validate_scores,
+    validate_selection,
+)
 
 
 def test_candidates_valid(candidates):
@@ -28,6 +33,30 @@ def test_candidate_mutations_rejected(candidates, mutation):
         set_id = "tampered"
     with pytest.raises(SemanticError):
         validate_candidates(rows, set_id)
+
+
+@pytest.mark.parametrize(
+    "field,value",
+    [
+        ("ticker", "NEW"),
+        ("exchange", "XNYS"),
+        ("issuer_id", "new-issuer"),
+        ("share_class", "B"),
+        ("is_adr", True),
+        ("former_tickers", ["OLD"]),
+        ("corporate_action_lineage", ["merger-1"]),
+    ],
+)
+def test_identity_mutation_rejects_old_candidate_set_id(candidates, field, value):
+    rows, old_id = copy.deepcopy(candidates)
+    rows[0][field] = value
+    with pytest.raises(SemanticError, match="candidate_set_id mismatch"):
+        validate_candidates(rows, old_id)
+
+
+def test_candidate_set_id_is_order_independent(candidates):
+    rows, set_id = candidates
+    validate_candidates(list(reversed(rows)), set_id)
 
 
 def scenario_input():
@@ -68,6 +97,7 @@ def test_scenario_derivation_recalculates_expected_values():
         {"THEME_BEAR": 0.2, "THEME_BASE": 0.5, "THEME_BULL": 0.3}, scenario_input()
     )
     assert result["AAA"]["probability_weighted_return"] == pytest.approx(0.14)
+    assert result["AAA"]["probability_weighted_annualized_return"] == pytest.approx(0.14)
     assert result["AAA"]["permanent_loss_probability"] == 0.2
 
 
@@ -82,6 +112,31 @@ def test_nonfinite_probability_rejected(bad):
 def test_no_selection_is_first_class(judgments):
     result = classify(["AAA"], {"AAA": []}, {"AAA": 0.02}, 0.05, judgments)
     assert result["no_selection"] and result["classifications"][0]["classification"] == "WATCH"
+    assert result["overall_decision"] == "NO_SELECTION"
+
+
+@pytest.mark.parametrize(
+    "field,value", [("absolute_attractiveness", True), ("overall_decision", "SELECTION")]
+)
+def test_no_selection_boolean_mutations_rejected(judgments, field, value):
+    result = classify(["AAA"], {"AAA": []}, {"AAA": 0.02}, 0.05, judgments)
+    result[field] = value
+    with pytest.raises(SemanticError):
+        validate_selection(result)
+
+
+def test_arbitrary_secondary_rejected(judgments):
+    result = classify(
+        ["AAA", "BBB", "CCC"],
+        {x: [] for x in ("AAA", "BBB", "CCC")},
+        {"AAA": 0.3, "BBB": 0.2, "CCC": 0.1},
+        0.05,
+        judgments,
+    )
+    result["classifications"][1]["classification"] = "CONDITIONAL"
+    result["classifications"][2]["classification"] = "SECONDARY"
+    with pytest.raises(SemanticError):
+        validate_selection(result)
 
 
 def test_hard_gate_cannot_be_offset(judgments):
@@ -179,9 +234,64 @@ def test_timezone_and_future_rejected():
         )
 
 
+def test_offsets_are_compared_as_instants_not_strings():
+    # Lexically cutoff looks later (02 > 01), but it is 00:30Z and comparison is 01:00Z.
+    validate_envelope(
+        {
+            "generation_id": "g",
+            "candidate_set_id": "c",
+            "comparison_as_of": "2025-01-01T01:00:00+00:00",
+            "source_cutoff_at": "2025-01-01T02:30:00+02:00",
+            "artifacts": [],
+        }
+    )
+
+
+def test_zero_realization_period_rejected():
+    inputs = scenario_input()
+    inputs["AAA"]["THEME_BASE"]["realization_months"] = 0
+    with pytest.raises(SemanticError, match="realization period"):
+        derive_scenario_results({"THEME_BEAR": 0.2, "THEME_BASE": 0.5, "THEME_BULL": 0.3}, inputs)
+
+
+def test_returns_are_annualized_before_horizon_comparison():
+    inputs = scenario_input()
+    inputs["BBB"] = copy.deepcopy(inputs["AAA"])
+    for case in inputs["AAA"].values():
+        if isinstance(case, dict):
+            case.update(target_price=110.0, realization_months=6)
+    for case in inputs["BBB"].values():
+        if isinstance(case, dict):
+            case.update(target_price=115.0, realization_months=24)
+    result = derive_scenario_results(
+        {"THEME_BEAR": 0.2, "THEME_BASE": 0.5, "THEME_BULL": 0.3}, inputs
+    )
+    assert (
+        result["AAA"]["probability_weighted_return"] < result["BBB"]["probability_weighted_return"]
+    )
+    assert (
+        result["AAA"]["probability_weighted_annualized_return"]
+        > result["BBB"]["probability_weighted_annualized_return"]
+    )
+
+
 def test_update_diff_only_reports_changes():
     changes = update_diff(
         {"generation_id": "g1", "price": 1, "same": 2},
         {"generation_id": "g2", "price": 3, "same": 2},
     )
-    assert changes == [{"field": "price", "before": 1, "after": 3, "change": "changed"}]
+    assert changes == [{"path": "/price", "before": 1, "after": 3, "change": "changed"}]
+
+
+def test_nested_diff_ignores_identified_array_order():
+    old = {
+        "generation_id": "g1",
+        "candidates": [{"candidate_id": "A", "price": 1}, {"candidate_id": "B", "price": 2}],
+    }
+    new = {
+        "generation_id": "g2",
+        "candidates": [{"candidate_id": "B", "price": 3}, {"candidate_id": "A", "price": 1}],
+    }
+    assert update_diff(old, new) == [
+        {"path": "/candidates/B/price", "before": 2, "after": 3, "change": "changed"}
+    ]

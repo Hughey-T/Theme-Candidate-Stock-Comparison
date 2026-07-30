@@ -19,7 +19,8 @@ DATA_STATES = (
     "missing",
 )
 COMPARABILITY = ("comparable", "partially_comparable", "not_comparable", "reference_only")
-CLASSIFICATIONS = ("PRIMARY", "SECONDARY", "CONDITIONAL", "WATCH", "EXCLUDED", "NO_SELECTION")
+CLASSIFICATIONS = ("PRIMARY", "SECONDARY", "CONDITIONAL", "WATCH", "EXCLUDED")
+OVERALL_DECISIONS = ("SELECTION", "NO_SELECTION")
 PERSISTENCE = (
     "not_generated",
     "generated_not_persisted",

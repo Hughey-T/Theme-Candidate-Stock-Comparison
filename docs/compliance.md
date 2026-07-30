@@ -1,15 +1,14 @@
 # Compliance matrix
 
-|要求|実装|Schema|テスト|
+| Requirement | Implementation | Schema | Executable tests |
 |---|---|---|---|
-|10+2 Phase/2操作/再開|`StateMachine.command/load`|session-state|`test_initial_ten_phases_and_idempotency_guard`, `test_update_two_phases`, transition/resume tests|
-|identity/12→8→5→2|`validate_candidates`, phase contract|candidate-input, normalized-candidate|candidate mutation tests|
-|共通scenario/再計算|`derive_scenario_results`, `validate_scenarios`|common-scenario|scenario/nonfinite tests|
-|比較不能/double count|`validate_scores`|ranking|unusable/dependency tests|
-|hard gate/NO_SELECTION|`classify`, `validate_selection`|final-selection|hard-gate/no-selection tests|
-|handoff|`build_handoff`|handoff|selection and E2E paths|
-|generation/cutoff|`validate_envelope`|phase-artifact|mixed envelope/timezone tests|
-|publication/hash/parts|`publish/reconstruct`|publication-manifest|publication mutation tests|
-|update diff/history|`update_diff`, state update|update-diff|diff/update tests|
-|closed schema/enums|schema generator/constants|全10 Schema|schema-current/closed/unknown tests|
-|サンプル/CI|samples, workflow|該当Schema|sample catalogue, full pytest matrix|
+| RFC3339 UTC instant | `models.parse_rfc3339`, `validate_envelope` | datetime pattern/format | offset/future/timezone tests |
+| Canonical candidate identity | `models.candidate_set_id` | candidate schemas | seven identity mutations/order test |
+| 12 closed Phase contracts | `schema_runtime`, `StateMachine.command` | phase-artifact oneOf/session embedded items | payload swap/unknown/malformed judgment |
+| Five derived rankings | `ranking.derive_rankings/validate_stored_rankings` | ranking | score/order/tie/coverage mutations |
+| Scenario/horizon returns | `engine.derive_scenario_results` | common scenario | TSR/annualization/zero months |
+| Selection/NO_SELECTION | `engine.select_from_analysis`, `validate_selection` | final-selection/handoff | hard gate/no-selection/selection mutations |
+| Update/history/handoff | `StateMachine`, `engine.update_diff` | state/update-diff/handoff | generation preservation/nested ID diff/supersession |
+| Atomic publication | `publication.publish/reconstruct` | publication manifest | UTF-8, retry, unknown/traversal/duplicate/hash mutations |
+| Persistence/latest | `transition_persistence/update_latest` | persistence enum | skip/repeat/unverified latest tests |
+| Reproducible CI | `constraints-dev.txt`, workflow | regenerated Schema | full matrix/quality/fresh clone jobs |

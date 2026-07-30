@@ -1,74 +1,150 @@
-"""Immutable, bounded, hash-addressed publication."""
+"""Atomic, bounded, hash-addressed publication and explicit persistence lifecycle."""
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
-from pathlib import Path
+import os
+import shutil
+import tempfile
+from pathlib import Path, PurePosixPath
 from typing import Any
 
-from .constants import MAX_PART_BYTES, SCHEMA_VERSION
-from .models import SemanticError, canonical_hash
+from .constants import MAX_PART_BYTES, PERSISTENCE, SCHEMA_VERSION
+from .models import SemanticError, canonical_bytes, canonical_hash
+
+
+def transition_persistence(current: str, target: str) -> str:
+    path = PERSISTENCE[:4]
+    if current not in path or target not in path or path.index(target) != path.index(current) + 1:
+        raise SemanticError("invalid persistence transition")
+    return target
 
 
 def split_payload(
     payload: dict[str, Any], generation_id: str, limit: int = MAX_PART_BYTES
-) -> list[bytes]:
-    raw = json.dumps(payload, sort_keys=True, ensure_ascii=False, allow_nan=False).encode()
-    if limit <= 0 or limit > MAX_PART_BYTES:
+) -> list[dict[str, Any]]:
+    """Return standalone closed JSON part documents using base64-safe chunks."""
+    if limit <= 256 or limit > MAX_PART_BYTES:
         raise SemanticError("invalid part size")
-    return [raw[offset : offset + limit] for offset in range(0, len(raw), limit)] or [b"{}"]
+    raw = canonical_bytes(payload)
+    # Base64 expands by 4/3; reserve space for the closed envelope.
+    chunk_size = max(1, (limit - 256) * 3 // 4)
+    chunks = [raw[offset : offset + chunk_size] for offset in range(0, len(raw), chunk_size)] or [
+        b"{}"
+    ]
+    return [
+        {
+            "schema_version": SCHEMA_VERSION,
+            "generation_id": generation_id,
+            "sequence": index,
+            "part_count": len(chunks),
+            "encoding": "base64",
+            "data": base64.b64encode(chunk).decode("ascii"),
+        }
+        for index, chunk in enumerate(chunks, 1)
+    ]
 
 
 def publish(root: Path, payload: dict[str, Any], context: dict[str, str]) -> dict[str, Any]:
     generation = context["generation_id"]
-    directory = root / "generations" / generation
-    if directory.exists():
+    generations = root / "generations"
+    target = generations / generation
+    if target.exists():
         raise SemanticError("immutable generation already exists")
-    directory.mkdir(parents=True)
-    parts = split_payload(payload, generation)
-    inventory = []
-    for index, raw in enumerate(parts, 1):
-        name = f"detail.part-{index:03d}.json"
-        (directory / name).write_bytes(raw)
-        inventory.append(
-            {
-                "path": name,
-                "raw_sha256": hashlib.sha256(raw).hexdigest(),
-                "size": len(raw),
-                "sequence": index,
-                "part_count": len(parts),
-                "generation_id": generation,
-            }
-        )
-    manifest = {
-        "schema_version": SCHEMA_VERSION,
-        **context,
-        "inventory": inventory,
-        "canonical_sha256": canonical_hash(payload),
-        "verification_status": "generated_not_persisted",
-    }
-    (directory / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n")
-    (root / "latest").write_text(generation + "\n")
-    return manifest
+    generations.mkdir(parents=True, exist_ok=True)
+    temporary = Path(tempfile.mkdtemp(prefix=f".{generation}-", dir=generations))
+    try:
+        parts = split_payload(payload, generation)
+        inventory = []
+        for part in parts:
+            name = f"detail.part-{part['sequence']:03d}.json"
+            raw = canonical_bytes(part)
+            if len(raw) > MAX_PART_BYTES:
+                raise SemanticError("part exceeds byte limit")
+            (temporary / name).write_bytes(raw)
+            inventory.append(
+                {
+                    "path": name,
+                    "raw_sha256": hashlib.sha256(raw).hexdigest(),
+                    "size": len(raw),
+                    "sequence": part["sequence"],
+                    "part_count": len(parts),
+                    "generation_id": generation,
+                }
+            )
+        manifest = {
+            "schema_version": SCHEMA_VERSION,
+            **context,
+            "inventory": inventory,
+            "canonical_sha256": canonical_hash(payload),
+            "verification_status": "generated_not_persisted",
+        }
+        (temporary / "manifest.json").write_bytes(canonical_bytes(manifest))
+        if reconstruct(temporary, manifest) != payload:
+            raise SemanticError("publication verification failed")
+        os.replace(temporary, target)
+        return manifest
+    except BaseException:
+        shutil.rmtree(temporary, ignore_errors=True)
+        raise
 
 
 def reconstruct(directory: Path, manifest: dict[str, Any]) -> dict[str, Any]:
     inventory = manifest["inventory"]
-    if [x["sequence"] for x in inventory] != list(range(1, len(inventory) + 1)):
-        raise SemanticError("part order/duplicate/gap")
-    raw = b""
+    paths = [item["path"] for item in inventory]
+    sequences = [item["sequence"] for item in inventory]
+    if len(paths) != len(set(paths)) or len(sequences) != len(set(sequences)):
+        raise SemanticError("duplicate path or sequence")
+    if sequences != list(range(1, len(inventory) + 1)):
+        raise SemanticError("part order/gap")
+    expected_files = set(paths) | {"manifest.json"}
+    actual_files = {entry.name for entry in directory.iterdir()}
+    if actual_files - expected_files:
+        raise SemanticError("unknown file in generation")
+    chunks = []
     for item in inventory:
+        pure = PurePosixPath(item["path"])
+        if pure.is_absolute() or ".." in pure.parts or len(pure.parts) != 1:
+            raise SemanticError("unsafe inventory path")
+        path = directory / item["path"]
+        if path.is_symlink() or not path.is_file():
+            raise SemanticError("part missing or symlinked")
         if (
             item["part_count"] != len(inventory)
             or item["generation_id"] != manifest["generation_id"]
         ):
             raise SemanticError("part count or generation mismatch")
-        part = (directory / item["path"]).read_bytes()
-        if len(part) != item["size"] or hashlib.sha256(part).hexdigest() != item["raw_sha256"]:
+        raw = path.read_bytes()
+        if len(raw) != item["size"] or hashlib.sha256(raw).hexdigest() != item["raw_sha256"]:
             raise SemanticError("part hash/size mismatch")
-        raw += part
-    value: dict[str, Any] = json.loads(raw)
+        part = json.loads(raw)
+        if set(part) != {
+            "schema_version",
+            "generation_id",
+            "sequence",
+            "part_count",
+            "encoding",
+            "data",
+        }:
+            raise SemanticError("part document is not closed")
+        if (
+            part["generation_id"] != manifest["generation_id"]
+            or part["sequence"] != item["sequence"]
+            or part["part_count"] != len(inventory)
+        ):
+            raise SemanticError("part envelope mismatch")
+        chunks.append(base64.b64decode(part["data"], validate=True))
+    value: dict[str, Any] = json.loads(b"".join(chunks))
     if canonical_hash(value) != manifest["canonical_sha256"]:
         raise SemanticError("reconstruction hash mismatch")
     return value
+
+
+def update_latest(root: Path, manifest: dict[str, Any]) -> None:
+    if manifest["verification_status"] != "integrity_verified":
+        raise SemanticError("latest requires remotely integrity-verified generation")
+    temporary = root / ".latest.tmp"
+    temporary.write_text(manifest["generation_id"] + "\n")
+    os.replace(temporary, root / "latest")

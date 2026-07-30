@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "type": "object",
   "additionalProperties": false,
   "properties": {
@@ -12,7 +11,6 @@
       "minItems": 1,
       "maxItems": 12,
       "items": {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "type": "object",
         "additionalProperties": false,
         "properties": {
@@ -89,5 +87,6 @@
   "required": [
     "theme",
     "candidates"
-  ]
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
 }
