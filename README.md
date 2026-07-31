@@ -28,6 +28,8 @@ Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Run
 
 Handoff v2はupdate operationとsnapshot data stateを分離し、confidence、catalyst、risk、invalidationをclosed typed objectで保存します。Candidate別assumption/evidenceは個別mapとして保存し、candidate changeの入力順に依存しない決定的なhandoffを生成します。
 
+Initial evidenceはsourceの`candidate_id`によりglobalとcandidate-boundへpartitionし、global evidenceやglobal judgment assumptionsを全candidateへ複製しません。State loadはactive/supersededを含む全handoffのpartitionをgeneration evidence registryと再照合します。
+
 ## Development
 
 Tool versions are pinned in `constraints-dev.txt`; dependency ranges in `pyproject.toml` prevent accidental major-version drift. Update pins only with a green Python 3.11–3.13 matrix.

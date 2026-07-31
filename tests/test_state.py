@@ -63,8 +63,8 @@ def test_initial_handoff_projects_validated_phase_artifacts(tmp_path):
     assert handoff["thesis_invalidation_conditions"]["A"]["values"] == ["demand"]
     assert handoff["evidence_manifest"] == ["E1", "E2"]
     assert handoff["confidence"]["A"] == {"state": "observed", "value": "medium"}
-    assert handoff["candidate_assumptions"]["A"] == ["demand persists"]
-    assert handoff["candidate_evidence_refs"]["A"] == ["E1", "E2"]
+    assert handoff["candidate_assumptions"]["A"] == []
+    assert handoff["candidate_evidence_refs"]["A"] == []
     assert handoff["key_assumptions"] == ["demand persists"]
 
 
@@ -232,6 +232,109 @@ def test_multi_candidate_context_overlay_is_order_independent(tmp_path):
     assert first["key_assumptions"] == ["launch on time"]
 
 
+def test_initial_evidence_and_assumptions_partition_is_identity_bound(tmp_path):
+    sm = machine(tmp_path)
+    state = initial()
+    artifacts = [artifact(phase) for phase in range(1, 11)]
+    artifacts[0]["facts"] = [
+        {
+            "evidence_id": "E-GLOBAL",
+            "candidate_id": None,
+            "statement": "global",
+            "source_type": "FACT",
+            "as_of": TS,
+        },
+        {
+            "evidence_id": "E-A",
+            "candidate_id": "A",
+            "statement": "A",
+            "source_type": "FACT",
+            "as_of": TS,
+        },
+        {
+            "evidence_id": "E-B",
+            "candidate_id": "B",
+            "statement": "B",
+            "source_type": "FACT",
+            "as_of": TS,
+        },
+    ]
+    for index, field, key in (
+        (5, "valuation_expectations", "valuations"),
+        (7, "catalysts", "catalysts"),
+        (8, "risks_and_stress", "company_risks"),
+    ):
+        rows = artifacts[index]["payload"][field][key]
+        row = json.loads(json.dumps(rows[0]))
+        row["candidate_id"] = "B"
+        rows.append(row)
+    state["generation_history"]["g1"]["artifacts"] = artifacts
+    first = sm._project_handoff_context(state, ["A", "B"])
+    artifacts[0]["facts"].reverse()
+    second = sm._project_handoff_context(state, ["B", "A"])
+    assert first["global_evidence_refs"] == ["E-GLOBAL"]
+    assert first["candidate_evidence_refs"] == {"A": ["E-A"], "B": ["E-B"]}
+    assert first["evidence_manifest"] == ["E-A", "E-B", "E-GLOBAL"]
+    assert first["key_assumptions"] == ["demand persists"]
+    assert first["candidate_assumptions"] == {"A": [], "B": []}
+    assert canonical_bytes(first) == canonical_bytes(second)
+
+
+@pytest.mark.parametrize(
+    "mutation", ["candidate_wrong", "global_wrong", "unknown", "missing", "extra"]
+)
+def test_handoff_evidence_registry_mutations_rejected(tmp_path, mutation):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    state = json.loads(sm.path.read_text())
+    evidence = state["generation_history"]["g1"]["artifacts"][0]["facts"]
+    evidence[0]["candidate_id"] = "A"
+    handoff = state["handoff_history"]["h1"]
+    handoff["global_evidence_refs"] = ["E2"]
+    handoff["candidate_evidence_refs"]["A"] = ["E1"]
+    handoff["evidence_manifest"] = ["E1", "E2"]
+    if mutation == "candidate_wrong":
+        handoff["candidate_evidence_refs"]["A"] = ["E2"]
+        handoff["evidence_manifest"] = ["E2"]
+    elif mutation == "global_wrong":
+        handoff["global_evidence_refs"] = ["E1", "E2"]
+    elif mutation == "unknown":
+        handoff["candidate_evidence_refs"]["A"] = ["UNKNOWN"]
+        handoff["evidence_manifest"] = ["E2", "UNKNOWN"]
+    elif mutation == "missing":
+        handoff["evidence_manifest"] = ["E1"]
+    elif mutation == "extra":
+        handoff["evidence_manifest"] = ["E1", "E2", "EXTRA"]
+    sm.path.write_text(json.dumps(state))
+    with pytest.raises(SemanticError, match="evidence"):
+        sm.load()
+
+
+def test_superseded_handoff_evidence_tampering_rejected(tmp_path):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    sm.command(
+        "更新",
+        {
+            "new_generation_id": "g2",
+            "new_candidate_set_id": SET_ID,
+            "new_comparison_as_of": "2025-02-01T00:00:00Z",
+            "new_source_cutoff_at": "2025-01-31T00:00:00Z",
+            "previous_generation_id": "g1",
+        },
+    )
+    sm.command("次", artifact(1, "g2", "update", "2025-01-31T00:00:00Z"))
+    sm.command("次", artifact(2, "g2", "update", "2025-01-31T00:00:00Z"))
+    state = json.loads(sm.path.read_text())
+    state["handoff_history"]["h1"]["global_evidence_refs"] = ["UNKNOWN"]
+    state["handoff_history"]["h1"]["evidence_manifest"] = ["UNKNOWN"]
+    sm.path.write_text(json.dumps(state))
+    with pytest.raises(SemanticError, match="evidence"):
+        sm.load()
+
+
 @pytest.mark.parametrize("operation,phase", [("次", 2), ("bad", 1), ("更新", 1)])
 def test_invalid_transition(tmp_path, operation, phase):
     with pytest.raises(SemanticError):
@@ -280,7 +383,7 @@ def test_update_two_phases_preserves_generation(tmp_path):
         "state": "observed",
         "value": "high",
     }
-    assert completed["handoff_history"]["h2"]["evidence_manifest"] == ["E1"]
+    assert completed["handoff_history"]["h2"]["evidence_manifest"] == ["E1", "E2"]
 
 
 def test_two_consecutive_update_generations_complete_and_chain_handoffs(tmp_path):

@@ -7,3 +7,5 @@ Phase artifactはmode/phase discriminator付き12-way `oneOf`。各branch、payl
 FACTS、COMPANY_CLAIMS、EXTERNAL_ESTIMATESはそれぞれsource_type constを持つ。Judgmentは存在するsupport/contrary evidence ID、confidence、assumptions、invalidation conditionsが必須である。Schema正本は`src/theme_compare/schemas`のpackage resourcesで、root symlinkは使用せず、generatorだけがpackage resourceを更新する。
 
 Handoff schema version 2ではconfidence/catalyst/risk/invalidationをclosed typed snapshotとし、operation stateとanalysis data stateを分離する。Candidate別assumption/evidence mapはcanonical candidate setを完全coverageし、global evidence manifestはglobal refsとcandidate refsの決定的unionである。
+
+Initial handoffのevidenceはsource recordの`candidate_id`でpartitionする。null identityは`global_evidence_refs`、candidate identityは対応する`candidate_evidence_refs[candidate]`だけに入る。Candidate identityを持たないjudgment assumptionsはglobal `key_assumptions`にのみ保存し、candidate mapへ推測複製しない。

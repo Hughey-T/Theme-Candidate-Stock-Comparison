@@ -356,22 +356,29 @@ class StateMachine:
         }
         risks = artifacts[8]["payload"]["risks_and_stress"]
         risk_rows = {row["candidate_id"]: row for row in risks["company_risks"]}
-        assumptions = list(
-            dict.fromkeys(
+        assumptions = sorted(
+            {
                 assumption
                 for artifact in artifacts
                 for judgment in artifact["judgments"]
                 for assumption in judgment["assumptions"]
-            )
+            }
         )
-        evidence_ids = list(
-            dict.fromkeys(
-                item["evidence_id"]
-                for artifact in artifacts
-                for collection in ("facts", "company_claims", "external_estimates")
-                for item in artifact[collection]
-            )
+        evidence = [
+            item
+            for artifact in artifacts
+            for collection in ("facts", "company_claims", "external_estimates")
+            for item in artifact[collection]
+        ]
+        global_evidence_refs = sorted(
+            {item["evidence_id"] for item in evidence if item["candidate_id"] is None}
         )
+        candidate_evidence_refs = {
+            candidate: sorted(
+                {item["evidence_id"] for item in evidence if item["candidate_id"] == candidate}
+            )
+            for candidate in candidates
+        }
         confidence_value = next(
             (
                 judgment["confidence"]
@@ -382,9 +389,7 @@ class StateMachine:
         )
         return {
             "key_assumptions": assumptions,
-            "candidate_assumptions": {
-                candidate: sorted(set(assumptions)) for candidate in candidates
-            },
+            "candidate_assumptions": {candidate: [] for candidate in candidates},
             "shared_theme_risks": risks["shared_theme_risks"],
             "company_specific_risks": {
                 candidate: {
@@ -432,11 +437,16 @@ class StateMachine:
                 candidate: {"state": "observed", "value": confidence_value}
                 for candidate in candidates
             },
-            "global_evidence_refs": [],
-            "candidate_evidence_refs": {
-                candidate: sorted(evidence_ids) for candidate in candidates
-            },
-            "evidence_manifest": sorted(evidence_ids),
+            "global_evidence_refs": global_evidence_refs,
+            "candidate_evidence_refs": candidate_evidence_refs,
+            "evidence_manifest": sorted(
+                set(global_evidence_refs)
+                | {
+                    evidence_id
+                    for candidate in sorted(candidate_evidence_refs)
+                    for evidence_id in candidate_evidence_refs[candidate]
+                }
+            ),
         }
 
     def _activate_initial_handoff(self, state: dict[str, Any], selection: dict[str, Any]) -> None:
@@ -478,6 +488,20 @@ class StateMachine:
         if parse_rfc3339(state["source_cutoff_at"]) > parse_rfc3339(state["comparison_as_of"]):
             raise SemanticError("future source cutoff")
         for handoff in state["handoff_history"].values():
+            handoff_cutoff = parse_rfc3339(handoff["source_cutoff_at"])
+            evidence_registry: dict[str, dict[str, Any]] = {}
+            for generation in state["generation_history"].values():
+                if parse_rfc3339(generation["source_cutoff_at"]) > handoff_cutoff:
+                    continue
+                for artifact in generation["artifacts"]:
+                    for collection in ("facts", "company_claims", "external_estimates"):
+                        for evidence in artifact[collection]:
+                            evidence_id = evidence["evidence_id"]
+                            if evidence_id in evidence_registry:
+                                raise SemanticError("duplicate evidence ID in handoff registry")
+                            if parse_rfc3339(evidence["as_of"]) > handoff_cutoff:
+                                raise SemanticError("handoff references future evidence")
+                            evidence_registry[evidence_id] = evidence
             candidates = set().union(
                 *(
                     set(handoff[key])
@@ -538,6 +562,15 @@ class StateMachine:
             )
             if handoff["evidence_manifest"] != expected_manifest:
                 raise SemanticError("handoff evidence manifest union mismatch")
+            for evidence_id in handoff["global_evidence_refs"]:
+                evidence = evidence_registry.get(evidence_id)
+                if evidence is None or evidence["candidate_id"] is not None:
+                    raise SemanticError("handoff global evidence identity mismatch")
+            for candidate, evidence_ids in handoff["candidate_evidence_refs"].items():
+                for evidence_id in evidence_ids:
+                    evidence = evidence_registry.get(evidence_id)
+                    if evidence is None or evidence["candidate_id"] != candidate:
+                        raise SemanticError("handoff candidate evidence identity mismatch")
             if any(
                 candidate != result["candidate_id"]
                 for candidate, result in handoff["company_scenario_results"].items()

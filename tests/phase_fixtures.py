@@ -109,7 +109,7 @@ def phase_object(phase, mode="initial"):
                                 "values": ["launch failure"],
                             },
                             "confidence": {"state": "changed", "value": "high"},
-                            "evidence_refs": {"state": "removed", "values": ["E2"]},
+                            "evidence_refs": {"state": "unchanged", "values": []},
                             "assumptions": {"state": "changed", "values": ["launch on time"]},
                         }
                     ],
@@ -322,7 +322,7 @@ def artifact(phase, generation="g1", mode="initial", cutoff=TS):
             value["handoff_context_changes"]["shared_theme_risks"]["state"] = "unchanged"
             value["handoff_context_changes"]["key_assumptions"]["state"] = "unchanged"
             for change in value["handoff_context_changes"]["candidate_changes"]:
-                change["evidence_refs"]["values"] = ["E1"]
+                change["evidence_refs"]["values"] = []
         else:
             value["superseded_handoff_id"] = f"h{generation_number - 1}"
             value["updated_handoff"].update(
