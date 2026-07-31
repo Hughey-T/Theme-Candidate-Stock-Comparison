@@ -80,7 +80,7 @@ def test_full_initial_update_api_e2e(tmp_path):
         response = c.post(
             f"/v1/sessions/{sid}/phases", headers=headers, json=runtime_artifact(phase)
         )
-        assert response.status_code == 200
+        assert response.status_code == 200, response.json()
     assert (
         c.get(f"/v1/sessions/{sid}/handoff", headers=headers).json()["active_handoff"]["handoff_id"]
         == "h1"
@@ -90,15 +90,20 @@ def test_full_initial_update_api_e2e(tmp_path):
         "new_source_cutoff_at": "2025-01-31T00:00:00Z",
         "candidate_inputs": [CANDIDATE, CANDIDATE_B],
     }
-    assert c.post(f"/v1/sessions/{sid}/updates", headers=headers, json=update).status_code == 200
+    update_response = c.post(f"/v1/sessions/{sid}/updates", headers=headers, json=update)
+    assert update_response.status_code == 200, update_response.json()
     for phase in (1, 2):
-        assert (
-            c.post(
-                f"/v1/sessions/{sid}/phases",
-                headers=headers,
-                json=artifact(phase, "g2", "update", "2025-01-31T00:00:00Z"),
-            ).status_code
-            == 200
+        response = c.post(
+            f"/v1/sessions/{sid}/phases",
+            headers=headers,
+            json=artifact(phase, "g2", "update", "2025-01-31T00:00:00Z"),
         )
+        assert response.status_code == 200, response.json()
+    active = c.get(f"/v1/sessions/{sid}/handoff", headers=headers).json()
+    assert active["active_handoff"]["handoff_id"] == "h2"
     history = c.get(f"/v1/sessions/{sid}/handoff?include_history=true", headers=headers).json()
-    assert len(history["handoff_history"]) == 2
+    assert [item["handoff_id"] for item in history["handoff_history"]] == ["h1", "h2"]
+    restarted = client(tmp_path)
+    resumed = restarted.get(f"/v1/sessions/{sid}", headers=headers)
+    assert resumed.status_code == 200, resumed.json()
+    assert resumed.json()["active_generation_id"] == "g2"

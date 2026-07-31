@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 import json
 import pytest
 from phase_fixtures import CANDIDATE, CANDIDATE_B, artifact
@@ -14,7 +15,9 @@ def upstream(candidates=None):
         "hypothesis": "growth",
         "comparison_as_of": "2025-01-01T00:00:00Z",
         "source_cutoff_at": "2025-01-01T00:00:00Z",
-        "candidate_inputs": candidates or [CANDIDATE, CANDIDATE_B],
+        "candidate_inputs": copy.deepcopy(
+            candidates if candidates is not None else [CANDIDATE, CANDIDATE_B]
+        ),
         "source_generation_id": "source-g1",
         "source_session_id": "source-s1",
         "evidence_refs": ["SOURCE-E1"],
@@ -35,6 +38,28 @@ def runtime_artifact(phase, *args):
             upstream_evidence_refs=["SOURCE-E1"],
         )
     return item
+
+
+def test_artifact_and_upstream_candidate_graphs_are_isolated():
+    original_set_id = candidate_set_id([CANDIDATE, CANDIDATE_B])
+    first = artifact(1)
+    second = artifact(1)
+    first_payload = first["payload"]["session_and_candidates"]
+    first_payload["candidate_inputs"][0]["ticker"] = "OTHER"
+    first_payload["normalized_candidates"].reverse()
+    first_payload["candidate_inputs"][0]["former_tickers"].append("OLD")
+    assert second["payload"]["session_and_candidates"]["candidate_inputs"][0]["ticker"] == "AAA"
+    assert (
+        second["payload"]["session_and_candidates"]["normalized_candidates"][0]["candidate_id"]
+        == "A"
+    )
+    assert CANDIDATE["ticker"] == "AAA" and CANDIDATE["former_tickers"] == []
+    assert candidate_set_id([CANDIDATE, CANDIDATE_B]) == original_set_id
+    first_upstream = upstream()
+    second_upstream = upstream()
+    first_upstream["candidate_inputs"][0]["ticker"] = "CHANGED"
+    assert second_upstream["candidate_inputs"][0]["ticker"] == "AAA"
+    assert CANDIDATE["ticker"] == "AAA"
 
 
 def test_upstream_is_authoritative_and_phase_schema_is_single_branch(tmp_path):

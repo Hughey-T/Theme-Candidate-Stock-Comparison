@@ -8,6 +8,7 @@ permissions:
 jobs:
   unit:
     strategy:
+      fail-fast: false
       matrix:
         python: ['3.11', '3.12', '3.13']
     runs-on: ubuntu-latest

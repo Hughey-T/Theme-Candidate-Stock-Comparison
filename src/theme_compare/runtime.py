@@ -7,6 +7,7 @@ import uuid
 from typing import Any
 
 from .models import SemanticError, candidate_set_id, canonical_bytes, parse_rfc3339
+from .phase_validation import validate_update_candidate_partition
 from .schema_runtime import schema_bytes, validate_document
 from .storage import JsonVolumeStorage
 from .validation import validate_candidates
@@ -359,17 +360,8 @@ class RuntimeService:
             or artifact.get("candidate_set_id") != expected_new
         ):
             raise SemanticError("update candidate-set ID mismatch")
-        old_ids = {
-            row["candidate_id"]
-            for row in state["runtime_context"]["generation_contexts"][previous]["candidate_inputs"]
-        }
-        new_ids = {row["candidate_id"] for row in expected_rows}
-        if (
-            set(diff.get("added_candidates", [])) != new_ids - old_ids
-            or set(diff.get("removed_candidates", [])) != old_ids - new_ids
-            or set(diff.get("retained_candidates", [])) != old_ids & new_ids
-        ):
-            raise SemanticError("update added/removed/retained partition mismatch")
+        previous_detailed = state["generation_history"][previous]["detailed_candidates"]
+        validate_update_candidate_partition(previous_detailed, diff)
 
     @staticmethod
     def _generation(state: dict[str, Any], generation: str) -> dict[str, Any]:
