@@ -66,6 +66,45 @@ def test_initial_handoff_projects_validated_phase_artifacts(tmp_path):
     assert handoff["key_assumptions"] == ["demand persists"]
 
 
+def test_update_projection_adds_explicit_state_and_removes_absent_candidate(tmp_path):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    state = sm.load()
+    update = artifact(1, "g2", "update", "2025-01-31T00:00:00Z")
+    changes = update["payload"]["update_diff"]["handoff_context_changes"]
+    added = json.loads(json.dumps(changes["candidate_changes"][0]))
+    added["candidate_id"] = "B"
+    added["valuation"].update(
+        state="not_evaluable",
+        data_state="not_evaluable",
+        method=None,
+        current_multiple=None,
+        implied_growth=None,
+        implied_margin=None,
+    )
+    added["catalysts"] = {"state": "no_identified_catalyst", "values": []}
+    for key in ("company_specific_risks", "thesis_invalidation_conditions"):
+        added[key] = {"state": "not_evaluable", "values": []}
+    added["confidence"] = {"state": "not_evaluable", "value": None}
+    added["evidence_refs"] = {"state": "not_evaluable", "values": []}
+    added["assumptions"] = {"state": "not_evaluable", "values": []}
+    changes["candidate_changes"] = [added]
+    state.update(mode="update", active_generation_id="g2", generation_id="g2")
+    state["generation_history"]["g2"] = {
+        "candidate_set_id": SET_ID,
+        "comparison_as_of": "2025-02-01T00:00:00Z",
+        "source_cutoff_at": "2025-01-31T00:00:00Z",
+        "detailed_candidates": ["B"],
+        "artifacts": [update],
+    }
+    projected = sm._project_handoff_context(state, ["B"])
+    assert set(projected["valuation_ranges"]) == {"B"}
+    assert projected["valuation_ranges"]["B"]["state"] == "not_evaluable"
+    assert projected["valuation_ranges"]["B"]["current_multiple"] is None
+    assert projected["catalysts"]["B"] == ["no_identified_catalyst"]
+
+
 @pytest.mark.parametrize("operation,phase", [("次", 2), ("bad", 1), ("更新", 1)])
 def test_invalid_transition(tmp_path, operation, phase):
     with pytest.raises(SemanticError):
@@ -99,6 +138,14 @@ def test_update_two_phases_preserves_generation(tmp_path):
     assert completed["handoff_history"]["h1"]["superseded_by"] == "h2"
     assert completed["handoff_history"]["h2"]["status"] == "active"
     assert completed["superseded_handoff_ids"] == ["h1"]
+    assert completed["handoff_history"]["h2"]["valuation_ranges"]["A"]["current_multiple"] == 12
+    assert completed["handoff_history"]["h2"]["catalysts"]["A"] == ["product launch"]
+    assert completed["handoff_history"]["h2"]["company_specific_risks"]["A"] == ["execution"]
+    assert completed["handoff_history"]["h2"]["thesis_invalidation_conditions"]["A"] == [
+        "launch failure"
+    ]
+    assert completed["handoff_history"]["h2"]["confidence"]["A"] == "high"
+    assert completed["handoff_history"]["h2"]["evidence_manifest"] == ["E1"]
 
 
 def test_two_consecutive_update_generations_complete_and_chain_handoffs(tmp_path):
@@ -134,12 +181,21 @@ def test_two_consecutive_update_generations_complete_and_chain_handoffs(tmp_path
     assert state["active_generation_id"] == "g3" and state["active_handoff_id"] == "h3"
     assert state["superseded_handoff_ids"] == ["h1", "h2"]
     assert state["handoff_history"]["h2"]["superseded_by"] == "h3"
-    assert state["handoff_history"]["h3"]["valuation_ranges"]["A"]["current_multiple"] == 10
-    assert state["handoff_history"]["h3"]["catalysts"]["A"] == ["earnings"]
+    assert state["handoff_history"]["h3"]["valuation_ranges"]["A"]["current_multiple"] == 12
+    assert state["handoff_history"]["h3"]["catalysts"]["A"] == ["product launch"]
+    assert state["handoff_history"]["h3"]["company_specific_risks"]["A"] == ["execution"]
 
 
 @pytest.mark.parametrize(
-    "mutation", ["same_generation", "stale_cutoff", "future_cutoff", "old_comparison"]
+    "mutation",
+    [
+        "same_generation",
+        "stale_cutoff",
+        "same_instant_offset",
+        "past_cutoff",
+        "future_cutoff",
+        "old_comparison",
+    ],
 )
 def test_update_start_contract_rejects_invalid_metadata(tmp_path, mutation):
     sm = machine(tmp_path)
@@ -156,12 +212,33 @@ def test_update_start_contract_rejects_invalid_metadata(tmp_path, mutation):
         metadata["new_generation_id"] = "g1"
     elif mutation == "stale_cutoff":
         metadata["new_source_cutoff_at"] = TS
+    elif mutation == "same_instant_offset":
+        metadata["new_source_cutoff_at"] = "2025-01-01T09:00:00+09:00"
+    elif mutation == "past_cutoff":
+        metadata["new_source_cutoff_at"] = "2024-12-31T23:59:59Z"
     elif mutation == "future_cutoff":
         metadata["new_source_cutoff_at"] = "2025-03-01T00:00:00Z"
     else:
         metadata["new_comparison_as_of"] = "2024-12-01T00:00:00Z"
     with pytest.raises(SemanticError):
         sm.command("更新", metadata)
+
+
+def test_update_cutoff_one_second_later_is_accepted(tmp_path):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    state = sm.command(
+        "更新",
+        {
+            "new_generation_id": "g2",
+            "new_candidate_set_id": SET_ID,
+            "new_comparison_as_of": "2025-02-01T00:00:00Z",
+            "new_source_cutoff_at": "2025-01-01T00:00:01Z",
+            "previous_generation_id": "g1",
+        },
+    )
+    assert state["active_generation_id"] == "g2"
 
 
 def test_interrupted_resume_reads_disk(tmp_path):

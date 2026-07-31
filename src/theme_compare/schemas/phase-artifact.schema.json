@@ -4448,6 +4448,338 @@
                       "reason"
                     ]
                   }
+                },
+                "handoff_context_changes": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "candidate_changes": {
+                      "type": "array",
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "properties": {
+                          "candidate_id": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "valuation": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "changed",
+                                  "unchanged",
+                                  "added",
+                                  "removed",
+                                  "not_evaluable",
+                                  "not_applicable",
+                                  "no_identified_catalyst"
+                                ]
+                              },
+                              "data_state": {
+                                "enum": [
+                                  "observed",
+                                  "estimated",
+                                  "not_disclosed",
+                                  "not_applicable",
+                                  "not_evaluable",
+                                  "conflicting_sources",
+                                  "stale",
+                                  "missing"
+                                ]
+                              },
+                              "method": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ]
+                              },
+                              "current_multiple": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "implied_growth": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              },
+                              "implied_margin": {
+                                "type": [
+                                  "number",
+                                  "null"
+                                ]
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "data_state",
+                              "method",
+                              "current_multiple",
+                              "implied_growth",
+                              "implied_margin"
+                            ]
+                          },
+                          "catalysts": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "changed",
+                                  "unchanged",
+                                  "added",
+                                  "removed",
+                                  "not_evaluable",
+                                  "not_applicable",
+                                  "no_identified_catalyst"
+                                ]
+                              },
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "uniqueItems": true
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "values"
+                            ]
+                          },
+                          "company_specific_risks": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "changed",
+                                  "unchanged",
+                                  "added",
+                                  "removed",
+                                  "not_evaluable",
+                                  "not_applicable",
+                                  "no_identified_catalyst"
+                                ]
+                              },
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "uniqueItems": true
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "values"
+                            ]
+                          },
+                          "thesis_invalidation_conditions": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "changed",
+                                  "unchanged",
+                                  "added",
+                                  "removed",
+                                  "not_evaluable",
+                                  "not_applicable",
+                                  "no_identified_catalyst"
+                                ]
+                              },
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "uniqueItems": true
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "values"
+                            ]
+                          },
+                          "confidence": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "changed",
+                                  "unchanged",
+                                  "added",
+                                  "removed",
+                                  "not_evaluable",
+                                  "not_applicable",
+                                  "no_identified_catalyst"
+                                ]
+                              },
+                              "value": {
+                                "type": [
+                                  "string",
+                                  "null"
+                                ],
+                                "enum": [
+                                  "low",
+                                  "medium",
+                                  "high",
+                                  null
+                                ]
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "value"
+                            ]
+                          },
+                          "evidence_refs": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "changed",
+                                  "unchanged",
+                                  "added",
+                                  "removed",
+                                  "not_evaluable",
+                                  "not_applicable",
+                                  "no_identified_catalyst"
+                                ]
+                              },
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "uniqueItems": true
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "values"
+                            ]
+                          },
+                          "assumptions": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "properties": {
+                              "state": {
+                                "enum": [
+                                  "changed",
+                                  "unchanged",
+                                  "added",
+                                  "removed",
+                                  "not_evaluable",
+                                  "not_applicable",
+                                  "no_identified_catalyst"
+                                ]
+                              },
+                              "values": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string",
+                                  "minLength": 1
+                                },
+                                "uniqueItems": true
+                              }
+                            },
+                            "required": [
+                              "state",
+                              "values"
+                            ]
+                          }
+                        },
+                        "required": [
+                          "candidate_id",
+                          "valuation",
+                          "catalysts",
+                          "company_specific_risks",
+                          "thesis_invalidation_conditions",
+                          "confidence",
+                          "evidence_refs",
+                          "assumptions"
+                        ]
+                      },
+                      "minItems": 1
+                    },
+                    "shared_theme_risks": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "changed",
+                            "unchanged",
+                            "added",
+                            "removed",
+                            "not_evaluable",
+                            "not_applicable",
+                            "no_identified_catalyst"
+                          ]
+                        },
+                        "values": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "uniqueItems": true
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "values"
+                      ]
+                    },
+                    "key_assumptions": {
+                      "type": "object",
+                      "additionalProperties": false,
+                      "properties": {
+                        "state": {
+                          "enum": [
+                            "changed",
+                            "unchanged",
+                            "added",
+                            "removed",
+                            "not_evaluable",
+                            "not_applicable",
+                            "no_identified_catalyst"
+                          ]
+                        },
+                        "values": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1
+                          },
+                          "uniqueItems": true
+                        }
+                      },
+                      "required": [
+                        "state",
+                        "values"
+                      ]
+                    }
+                  },
+                  "required": [
+                    "candidate_changes",
+                    "shared_theme_risks",
+                    "key_assumptions"
+                  ]
                 }
               },
               "required": [
@@ -4461,7 +4793,8 @@
                 "retained_candidates",
                 "normalized_candidates",
                 "updated_candidate_set_id",
-                "candidate_change_reasons"
+                "candidate_change_reasons",
+                "handoff_context_changes"
               ]
             },
             "summary": {

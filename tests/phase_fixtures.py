@@ -90,6 +90,32 @@ def phase_object(phase, mode="initial"):
                 "normalized_candidates": [CANDIDATE, CANDIDATE_B],
                 "updated_candidate_set_id": SET_ID,
                 "candidate_change_reasons": [],
+                "handoff_context_changes": {
+                    "candidate_changes": [
+                        {
+                            "candidate_id": "A",
+                            "valuation": {
+                                "state": "changed",
+                                "data_state": "observed",
+                                "method": "DCF",
+                                "current_multiple": 12,
+                                "implied_growth": 0.25,
+                                "implied_margin": 0.22,
+                            },
+                            "catalysts": {"state": "changed", "values": ["product launch"]},
+                            "company_specific_risks": {"state": "changed", "values": ["execution"]},
+                            "thesis_invalidation_conditions": {
+                                "state": "changed",
+                                "values": ["launch failure"],
+                            },
+                            "confidence": {"state": "changed", "value": "high"},
+                            "evidence_refs": {"state": "removed", "values": ["E2"]},
+                            "assumptions": {"state": "changed", "values": ["launch on time"]},
+                        }
+                    ],
+                    "shared_theme_risks": {"state": "changed", "values": ["regulation"]},
+                    "key_assumptions": {"state": "changed", "values": ["launch on time"]},
+                },
             }
         _, selection = phase_object(10, "initial")
         return "updated_selection", {
@@ -282,6 +308,19 @@ def artifact(phase, generation="g1", mode="initial", cutoff=TS):
                 comparison_as_of="2025-03-01T00:00:00Z",
                 source_cutoff_at=cutoff,
             )
+            for change in value["handoff_context_changes"]["candidate_changes"]:
+                for key in (
+                    "valuation",
+                    "catalysts",
+                    "company_specific_risks",
+                    "thesis_invalidation_conditions",
+                    "confidence",
+                    "evidence_refs",
+                    "assumptions",
+                ):
+                    change[key]["state"] = "unchanged"
+            value["handoff_context_changes"]["shared_theme_risks"]["state"] = "unchanged"
+            value["handoff_context_changes"]["key_assumptions"]["state"] = "unchanged"
         else:
             value["superseded_handoff_id"] = f"h{generation_number - 1}"
             value["updated_handoff"].update(

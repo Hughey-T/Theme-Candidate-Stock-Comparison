@@ -146,6 +146,47 @@ def main():
             "supersedes": {"type": ["string", "null"]},
         }
     )
+    update_state = {
+        "enum": [
+            "changed",
+            "unchanged",
+            "added",
+            "removed",
+            "not_evaluable",
+            "not_applicable",
+            "no_identified_catalyst",
+        ]
+    }
+    string_change = closed(
+        {"state": update_state, "values": {"type": "array", "items": STRING, "uniqueItems": True}}
+    )
+    valuation_change = closed(
+        {
+            "state": update_state,
+            "data_state": state_value,
+            "method": {"type": ["string", "null"]},
+            "current_multiple": {"type": ["number", "null"]},
+            "implied_growth": {"type": ["number", "null"]},
+            "implied_margin": {"type": ["number", "null"]},
+        }
+    )
+    candidate_context_change = closed(
+        {
+            "candidate_id": STRING,
+            "valuation": valuation_change,
+            "catalysts": string_change,
+            "company_specific_risks": string_change,
+            "thesis_invalidation_conditions": string_change,
+            "confidence": closed(
+                {
+                    "state": update_state,
+                    "value": {"type": ["string", "null"], "enum": ["low", "medium", "high", None]},
+                }
+            ),
+            "evidence_refs": string_change,
+            "assumptions": string_change,
+        }
+    )
     phase_contracts = {
         1: (
             "session_and_candidates",
@@ -483,6 +524,17 @@ def main():
                         "type": "array",
                         "items": closed({"candidate_id": STRING, "reason": STRING}),
                     },
+                    "handoff_context_changes": closed(
+                        {
+                            "candidate_changes": {
+                                "type": "array",
+                                "items": candidate_context_change,
+                                "minItems": 1,
+                            },
+                            "shared_theme_risks": string_change,
+                            "key_assumptions": string_change,
+                        }
+                    ),
                 }
             ),
         ),

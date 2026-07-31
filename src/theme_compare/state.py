@@ -54,12 +54,12 @@ class StateMachine:
                 raise SemanticError("update requires a new generation")
             new_comparison = parse_rfc3339(artifact["new_comparison_as_of"])
             new_cutoff = parse_rfc3339(artifact["new_source_cutoff_at"])
-            if new_cutoff > new_comparison or new_comparison < parse_rfc3339(
-                state["comparison_as_of"]
-            ):
+            previous_comparison = parse_rfc3339(state["comparison_as_of"])
+            previous_cutoff = parse_rfc3339(state["source_cutoff_at"])
+            if new_cutoff > new_comparison:
                 raise SemanticError("invalid update timestamps")
-            if artifact["new_source_cutoff_at"] == state["source_cutoff_at"]:
-                raise SemanticError("update must not silently reuse stale cutoff")
+            if new_comparison < previous_comparison or new_cutoff <= previous_cutoff:
+                raise SemanticError("update timestamps must advance monotonically")
             previous = state["active_generation_id"]
             new_generation = artifact["new_generation_id"]
             state.update(
@@ -181,7 +181,7 @@ class StateMachine:
     ) -> dict[str, Any]:
         if state["mode"] == "update" and state["active_handoff_id"] is not None:
             previous = state["handoff_history"][state["active_handoff_id"]]
-            return {
+            projected = {
                 "key_assumptions": previous["key_assumptions"],
                 "shared_theme_risks": previous["shared_theme_risks"],
                 "company_specific_risks": {
@@ -217,6 +217,73 @@ class StateMachine:
                 },
                 "evidence_manifest": previous["evidence_manifest"],
             }
+            update_artifact = state["generation_history"][state["active_generation_id"]][
+                "artifacts"
+            ][0]
+            changes = update_artifact["payload"]["update_diff"]["handoff_context_changes"]
+
+            def changed(item: dict[str, Any]) -> bool:
+                return bool(item["state"] != "unchanged")
+
+            for candidate_change in changes["candidate_changes"]:
+                candidate = candidate_change["candidate_id"]
+                if candidate not in candidates:
+                    continue
+                valuation = candidate_change["valuation"]
+                if changed(valuation):
+                    unavailable = valuation["state"] in ("not_evaluable", "not_applicable")
+                    projected["valuation_ranges"][candidate] = {
+                        "state": valuation["state"] if unavailable else valuation["data_state"],
+                        "method": None if unavailable else valuation["method"],
+                        "current_multiple": None if unavailable else valuation["current_multiple"],
+                        "implied_growth": None if unavailable else valuation["implied_growth"],
+                        "implied_margin": None if unavailable else valuation["implied_margin"],
+                    }
+                for source, target in (
+                    ("company_specific_risks", "company_specific_risks"),
+                    ("thesis_invalidation_conditions", "thesis_invalidation_conditions"),
+                ):
+                    item = candidate_change[source]
+                    if changed(item):
+                        projected[target][candidate] = item["values"] or [item["state"]]
+                catalyst = candidate_change["catalysts"]
+                if changed(catalyst):
+                    projected["catalysts"][candidate] = (
+                        ["no_identified_catalyst"]
+                        if catalyst["state"] == "no_identified_catalyst"
+                        else catalyst["values"] or [catalyst["state"]]
+                    )
+                confidence = candidate_change["confidence"]
+                if changed(confidence):
+                    projected["confidence"][candidate] = confidence["value"] or "low"
+            if changed(changes["shared_theme_risks"]):
+                projected["shared_theme_risks"] = changes["shared_theme_risks"]["values"]
+            if changed(changes["key_assumptions"]):
+                projected["key_assumptions"] = changes["key_assumptions"]["values"]
+            for candidate_change in changes["candidate_changes"]:
+                assumptions = candidate_change["assumptions"]
+                if assumptions["state"] in ("added", "changed"):
+                    projected["key_assumptions"] = list(
+                        dict.fromkeys([*projected["key_assumptions"], *assumptions["values"]])
+                    )
+                elif assumptions["state"] == "removed":
+                    projected["key_assumptions"] = [
+                        value
+                        for value in projected["key_assumptions"]
+                        if value not in assumptions["values"]
+                    ]
+                evidence = candidate_change["evidence_refs"]
+                if evidence["state"] in ("added", "changed"):
+                    projected["evidence_manifest"] = list(
+                        dict.fromkeys([*projected["evidence_manifest"], *evidence["values"]])
+                    )
+                elif evidence["state"] == "removed":
+                    projected["evidence_manifest"] = [
+                        value
+                        for value in projected["evidence_manifest"]
+                        if value not in evidence["values"]
+                    ]
+            return projected
         artifacts = state["generation_history"][state["initial_generation_id"]]["artifacts"]
         valuations = {
             row["candidate_id"]: row

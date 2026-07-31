@@ -37,12 +37,13 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
         if isinstance(value, dict):
             for key, child in value.items():
                 if key == "evidence_refs":
-                    if len(child) != len(set(child)) or any(ref not in registry for ref in child):
+                    refs = child["values"] if isinstance(child, dict) else child
+                    if len(refs) != len(set(refs)) or any(ref not in registry for ref in refs):
                         raise SemanticError("payload evidence reference mismatch")
                     candidate_id = value.get("candidate_id")
                     if candidate_id is not None and any(
                         registry[ref].get("candidate_id") not in (None, candidate_id)
-                        for ref in child
+                        for ref in refs
                     ):
                         raise SemanticError("payload evidence candidate mismatch")
                 else:
@@ -298,6 +299,11 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
             raise SemanticError("updated candidate set mismatch")
         if not updated <= {row["candidate_id"] for row in value["normalized_candidates"]}:
             raise SemanticError("updated candidate identity coverage mismatch")
+        context_ids = [
+            row["candidate_id"] for row in value["handoff_context_changes"]["candidate_changes"]
+        ]
+        if len(context_ids) != len(set(context_ids)) or set(context_ids) != updated:
+            raise SemanticError("handoff context candidate coverage mismatch")
     elif mode == "update" and phase == 2:
         value = payload["updated_selection"]
         if (
