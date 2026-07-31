@@ -1,3 +1,4 @@
+import copy
 from theme_compare.models import candidate_set_id
 from theme_compare.ranking import RANKING_TYPES
 
@@ -15,7 +16,7 @@ CANDIDATE = {
     "listing_country": "US",
 }
 CANDIDATE_B = {
-    **CANDIDATE,
+    **copy.deepcopy(CANDIDATE),
     "candidate_id": "B",
     "issuer_id": "issuer-B",
     "issuer_name": "Issuer B",
@@ -59,7 +60,7 @@ def scenario_result():
     }
 
 
-def phase_object(phase, mode="initial"):
+def _phase_object(phase, mode="initial"):
     assessment = {
         "candidate_id": "A",
         "score": 0.7,
@@ -294,6 +295,11 @@ def phase_object(phase, mode="initial"):
     }
 
 
+def phase_object(phase, mode="initial"):
+    """Return a fully isolated phase payload graph for mutation-heavy tests."""
+    return copy.deepcopy(_phase_object(phase, mode))
+
+
 def artifact(phase, generation="g1", mode="initial", cutoff=TS):
     field, value = phase_object(phase, mode)
     if mode == "update" and generation != "g2":
@@ -347,7 +353,7 @@ def artifact(phase, generation="g1", mode="initial", cutoff=TS):
         },
     ]
     include_evidence = mode == "initial" and phase == 1
-    return {
+    result = {
         "mode": mode,
         "phase": phase,
         "generation_id": generation,
@@ -370,3 +376,4 @@ def artifact(phase, generation="g1", mode="initial", cutoff=TS):
         else [],
         "payload": {field: value, "summary": "complete"},
     }
+    return copy.deepcopy(result)

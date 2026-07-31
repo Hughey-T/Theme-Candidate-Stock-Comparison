@@ -12,6 +12,22 @@ from .validation import (
 )
 
 
+def validate_update_candidate_partition(
+    previous_detailed: list[str], update_diff: dict[str, Any]
+) -> None:
+    """Validate the canonical previous/updated detailed-candidate partition."""
+    previous = set(previous_detailed)
+    updated = set(update_diff["updated_detailed_candidates"])
+    if set(update_diff["previous_detailed_candidates"]) != previous:
+        raise SemanticError("previous detailed candidate mismatch")
+    if set(update_diff["added_candidates"]) != updated - previous:
+        raise SemanticError("added candidate mismatch")
+    if set(update_diff["removed_candidates"]) != previous - updated:
+        raise SemanticError("removed candidate mismatch")
+    if set(update_diff["retained_candidates"]) != previous & updated:
+        raise SemanticError("retained candidate mismatch")
+
+
 def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> None:
     def validate_finite(value: Any, path: str = "payload") -> None:
         if isinstance(value, float):
@@ -295,16 +311,8 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
             or new_metadata["source_cutoff_at"] != state["source_cutoff_at"]
         ):
             raise SemanticError("update generation metadata mismatch")
-        previous = set(previous_entry["detailed_candidates"])
+        validate_update_candidate_partition(previous_entry["detailed_candidates"], value)
         updated = set(value["updated_detailed_candidates"])
-        if set(value["previous_detailed_candidates"]) != previous:
-            raise SemanticError("previous detailed candidate mismatch")
-        if set(value["added_candidates"]) != updated - previous:
-            raise SemanticError("added candidate mismatch")
-        if set(value["removed_candidates"]) != previous - updated:
-            raise SemanticError("removed candidate mismatch")
-        if set(value["retained_candidates"]) != previous & updated:
-            raise SemanticError("retained candidate mismatch")
         validate_candidates(value["normalized_candidates"], value["updated_candidate_set_id"])
         if value["updated_candidate_set_id"] != state["candidate_set_id"]:
             raise SemanticError("updated candidate set mismatch")

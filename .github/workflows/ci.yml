@@ -8,6 +8,7 @@ permissions:
 jobs:
   unit:
     strategy:
+      fail-fast: false
       matrix:
         python: ['3.11', '3.12', '3.13']
     runs-on: ubuntu-latest
@@ -35,7 +36,48 @@ jobs:
       - uses: actions/checkout@v4
         with: {path: clean}
       - run: python -m venv /tmp/theme-venv && cd clean && PIP_CONSTRAINT=constraints-dev.txt /tmp/theme-venv/bin/pip wheel '.[dev]' -w /tmp/wheels
+      - name: Validate wheel schema inventory
+        run: cd clean && PYTHONPATH=tests /tmp/theme-venv/bin/python -c "from pathlib import Path; from test_container_contract import assert_schema_wheel_contents; assert_schema_wheel_contents(next(Path('/tmp/wheels').glob('theme_candidate*.whl')))"
       - run: PIP_CONSTRAINT=clean/constraints-dev.txt /tmp/theme-venv/bin/pip install /tmp/wheels/*.whl
       - name: Import wheel and packaged schemas outside checkout
         run: cd /tmp && /tmp/theme-venv/bin/python -c "from theme_compare.schema_runtime import schema_bytes; from theme_compare.state import StateMachine; assert b'oneOf' in schema_bytes('phase-artifact')"
       - run: cd clean && /tmp/theme-venv/bin/pytest -q tests/test_state.py tests/test_publication.py
+
+  container-runtime:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t theme-compare:test .
+      - name: Authenticated persistent-volume session restart E2E
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f runtime-1 runtime-2 2>/dev/null || true; docker volume rm theme-compare-ci 2>/dev/null || true' EXIT
+          python - <<'PY'
+          import json,sys
+          sys.path[:0]=['tests','src']
+          from phase_fixtures import CANDIDATE,CANDIDATE_B,artifact
+          upstream={"schema_version":"1.0.0","theme":"AI","hypothesis":"growth","comparison_as_of":"2025-01-01T00:00:00Z","source_cutoff_at":"2025-01-01T00:00:00Z","candidate_inputs":[CANDIDATE,CANDIDATE_B],"source_generation_id":"source-g1","source_session_id":"source-s1","evidence_refs":["SOURCE-E1"]}
+          item=artifact(1); item['payload']['session_and_candidates'].update(source_session_id='source-s1',source_generation_id='source-g1',upstream_evidence_refs=['SOURCE-E1']); open('/tmp/upstream.json','w').write(json.dumps(upstream)); open('/tmp/phase1.json','w').write(json.dumps(item))
+          PY
+          docker volume create theme-compare-ci
+          docker run -d --name runtime-1 -e THEME_COMPARE_API_KEY=ci-secret -v theme-compare-ci:/data/sessions -p 8000:8000 theme-compare:test
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/health && break; sleep 1; done
+          curl -fsS -H 'Authorization: Bearer ci-secret' -H 'Content-Type: application/json' --data-binary @/tmp/upstream.json http://127.0.0.1:8000/v1/sessions >/tmp/create.json
+          SESSION_ID=$(python -c "import json; print(json.load(open('/tmp/create.json'))['session_id'])")
+          curl -fsS -H 'Authorization: Bearer ci-secret' http://127.0.0.1:8000/v1/sessions/$SESSION_ID >/tmp/before.json
+          docker rm -f runtime-1
+          docker run -d --name runtime-2 -e THEME_COMPARE_API_KEY=ci-secret -v theme-compare-ci:/data/sessions -p 8000:8000 theme-compare:test
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8000/health && break; sleep 1; done
+          curl -fsS -H 'Authorization: Bearer ci-secret' http://127.0.0.1:8000/v1/sessions/$SESSION_ID >/tmp/after.json
+          cmp /tmp/before.json /tmp/after.json
+          curl -fsS -H 'Authorization: Bearer ci-secret' -H 'Content-Type: application/json' --data-binary @/tmp/phase1.json http://127.0.0.1:8000/v1/sessions/$SESSION_ID/phases >/tmp/accepted.json
+          python -c "import json; assert json.load(open('/tmp/accepted.json'))['accepted'] is True"
+          echo "restored_session_id=$SESSION_ID"
+  openapi-contract:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.13'}
+      - run: python -m pip install pyyaml openapi-spec-validator
+      - run: openapi-spec-validator openapi/custom-gpt-action.openapi.yaml

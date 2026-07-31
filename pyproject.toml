@@ -6,22 +6,16 @@ build-backend = "hatchling.build"
 name = "theme-candidate-stock-comparison"
 version = "1.0.0"
 requires-python = ">=3.11"
-dependencies = ["jsonschema>=4.21,<5"]
+dependencies = ["jsonschema>=4.21,<5", "fastapi>=0.115,<1", "uvicorn>=0.30,<1"]
 
 [project.optional-dependencies]
-dev = ["pytest>=8,<10", "ruff==0.15.12", "mypy>=1.10,<2", "types-jsonschema"]
+dev = ["pytest>=8,<10", "httpx>=0.27,<1", "pyyaml>=6,<7", "ruff==0.15.12", "mypy>=1.10,<2", "types-jsonschema"]
 
 [project.scripts]
 theme-compare = "theme_compare.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/theme_compare"]
-
-[tool.hatch.build]
-include = ["src/theme_compare/schemas/*.schema.json"]
-
-[tool.hatch.build.targets.wheel.force-include]
-"src/theme_compare/schemas" = "theme_compare/schemas"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
@@ -37,3 +31,11 @@ strict = true
 [[tool.mypy.overrides]]
 module = "jsonschema.*"
 ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["fastapi.*", "uvicorn.*"]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = "theme_compare.api"
+disable_error_code = ["untyped-decorator"]

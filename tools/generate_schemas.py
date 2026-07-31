@@ -571,6 +571,13 @@ def main():
     }
     phase_contracts[102] = ("updated_selection", closed(update_selection_properties))
     variants = []
+    # Optional for legacy StateMachine callers; private runtime requires and binds lineage.
+    phase_contracts[1][1]["properties"].update(
+        source_session_id=STRING,
+        source_generation_id=STRING,
+        upstream_evidence_refs={"type": "array", "items": STRING, "uniqueItems": True},
+    )
+
     for key, (field, phase_object) in phase_contracts.items():
         mode = "initial" if key < 100 else "update"
         phase = key if key < 100 else key - 100
@@ -753,6 +760,72 @@ def main():
             "superseded_handoff_ids": {"type": "array", "items": STRING, "uniqueItems": True},
         }
     )
+    generation_context = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "candidate_inputs": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": candidate,
+            },
+            "candidate_set_id": STRING,
+            "analysis_candidate_set_id": STRING,
+        },
+        "required": ["candidate_inputs", "candidate_set_id"],
+    }
+    state["properties"]["runtime_context"] = {
+        "type": "object",
+        "additionalProperties": False,
+        "properties": {
+            "schema_version": {"const": "1.0.0"},
+            "theme": STRING,
+            "hypothesis": STRING,
+            "source_session_id": STRING,
+            "source_generation_id": STRING,
+            "evidence_refs": {"type": "array", "items": STRING, "uniqueItems": True},
+            "upstream_candidate_set_id": STRING,
+            "analysis_candidate_set_id": STRING,
+            "candidate_inputs": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": candidate,
+            },
+            "generation_contexts": {"type": "object", "additionalProperties": generation_context},
+        },
+        "required": [
+            "schema_version",
+            "theme",
+            "hypothesis",
+            "source_session_id",
+            "source_generation_id",
+            "evidence_refs",
+            "upstream_candidate_set_id",
+            "candidate_inputs",
+            "generation_contexts",
+        ],
+    }
+    upstream_handoff = closed(
+        {
+            "schema_version": {"const": "1.0.0"},
+            "theme": STRING,
+            "hypothesis": STRING,
+            "comparison_as_of": DT,
+            "source_cutoff_at": DT,
+            "candidate_inputs": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "uniqueItems": True,
+                "items": candidate,
+            },
+            "source_generation_id": STRING,
+            "source_session_id": STRING,
+            "evidence_refs": {"type": "array", "items": STRING, "uniqueItems": True},
+        }
+    )
     inventory = closed(
         {
             "path": STRING,
@@ -771,6 +844,7 @@ def main():
             }
         ),
         "normalized-candidate": candidate,
+        "upstream-theme-handoff": upstream_handoff,
         "session-state": state,
         "phase-artifact": artifact,
         "common-scenario": closed(
