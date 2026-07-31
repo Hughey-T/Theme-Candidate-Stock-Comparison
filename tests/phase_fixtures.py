@@ -82,6 +82,14 @@ def phase_object(phase, mode="initial"):
                     "source_cutoff_at": "2025-01-31T00:00:00Z",
                 },
                 "changes": [],
+                "previous_detailed_candidates": ["A"],
+                "updated_detailed_candidates": ["A"],
+                "added_candidates": [],
+                "removed_candidates": [],
+                "retained_candidates": ["A"],
+                "normalized_candidates": [CANDIDATE, CANDIDATE_B],
+                "updated_candidate_set_id": SET_ID,
+                "candidate_change_reasons": [],
             }
         _, selection = phase_object(10, "initial")
         return "updated_selection", {
@@ -92,6 +100,7 @@ def phase_object(phase, mode="initial"):
             "updated_handoff": {
                 "handoff_id": "h2",
                 "generation_id": "g2",
+                "candidate_set_id": SET_ID,
                 "status": "active",
                 "primary_candidate": "A",
                 "secondary_candidate": None,
@@ -245,6 +254,7 @@ def phase_object(phase, mode="initial"):
         "handoff": {
             "handoff_id": "h1",
             "generation_id": "g1",
+            "candidate_set_id": SET_ID,
             "status": "active",
             "primary_candidate": "A",
             "secondary_candidate": None,
@@ -260,6 +270,25 @@ def phase_object(phase, mode="initial"):
 
 def artifact(phase, generation="g1", mode="initial", cutoff=TS):
     field, value = phase_object(phase, mode)
+    if mode == "update" and generation != "g2":
+        generation_number = int(generation.removeprefix("g"))
+        previous_generation = f"g{generation_number - 1}"
+        if phase == 1:
+            value["old_generation"]["generation_id"] = previous_generation
+            value["old_generation"]["comparison_as_of"] = "2025-02-01T00:00:00Z"
+            value["old_generation"]["source_cutoff_at"] = "2025-01-31T00:00:00Z"
+            value["new_generation"].update(
+                generation_id=generation,
+                comparison_as_of="2025-03-01T00:00:00Z",
+                source_cutoff_at=cutoff,
+            )
+        else:
+            value["superseded_handoff_id"] = f"h{generation_number - 1}"
+            value["updated_handoff"].update(
+                handoff_id=f"h{generation_number}",
+                generation_id=generation,
+                supersedes=f"h{generation_number - 1}",
+            )
     evidence = [
         {
             "evidence_id": "E1",
@@ -292,7 +321,7 @@ def artifact(phase, generation="g1", mode="initial", cutoff=TS):
                 "evidence_refs": ["E1"],
                 "contrary_evidence_refs": ["E2"],
                 "confidence": "medium",
-                "assumptions": [],
+                "assumptions": ["demand persists"],
                 "invalidation_conditions": ["x"],
             }
         ]

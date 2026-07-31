@@ -443,16 +443,49 @@
         "type": "object",
         "additionalProperties": false,
         "properties": {
-          "low": {
-            "type": "number"
+          "state": {
+            "enum": [
+              "observed",
+              "estimated",
+              "not_disclosed",
+              "not_applicable",
+              "not_evaluable",
+              "conflicting_sources",
+              "stale",
+              "missing"
+            ]
           },
-          "high": {
-            "type": "number"
+          "method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "current_multiple": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "implied_growth": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "implied_margin": {
+            "type": [
+              "number",
+              "null"
+            ]
           }
         },
         "required": [
-          "low",
-          "high"
+          "state",
+          "method",
+          "current_multiple",
+          "implied_growth",
+          "implied_margin"
         ]
       }
     },

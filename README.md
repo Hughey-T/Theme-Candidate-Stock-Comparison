@@ -17,7 +17,8 @@ runtimeが保証しないものは、sourceの真実性、市場データの完�
 * 12 Phaseの内部までclosedなpackage-resource Schemaと必須phase semantic dispatcher
 * Phase 2 canonical detail setに対するPhase 3～10の完全candidate coverageとpair/metric matrix検証
 * generation evidence registryによる分類・ID・cutoff・全payload referenceの整合性検証
-* generationごとのas-of/cutoffとold generation/handoff historyを保持し、update handoffをsupersede
+* complete generationから何度でも更新し、generation固有のcanonical candidate setとas-of/cutoffを履歴保持
+* Phase 6/8/9・evidence・confidenceをhandoffへ実データ投影し、各updateでhandoff chainをatomic supersede
 * NaN/Infinity、duplicate JSON key、不正UTF-8を拒否するstrict runtime decode
 * base64のclosed JSON partsをtemporary directoryで生成・復元検証してatomic rename
 * remote integrity verification後だけlatestを更新

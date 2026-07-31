@@ -43,14 +43,14 @@ class StateMachine:
             raise SemanticError("only 次 and 更新 are accepted")
         state = self.load()
         if operation == "更新":
-            if state["mode"] != "initial" or state["status"] != "complete":
-                raise SemanticError("update requires completed initial analysis")
+            if state["status"] != "complete":
+                raise SemanticError("update requires a completed generation")
             if artifact is None:
                 raise SemanticError("update metadata required")
             validate_document("update-start", artifact)
             if artifact["previous_generation_id"] != state["active_generation_id"]:
                 raise SemanticError("previous generation mismatch")
-            if artifact["new_generation_id"] == state["active_generation_id"]:
+            if artifact["new_generation_id"] in state["generation_history"]:
                 raise SemanticError("update requires a new generation")
             new_comparison = parse_rfc3339(artifact["new_comparison_as_of"])
             new_cutoff = parse_rfc3339(artifact["new_source_cutoff_at"])
@@ -78,6 +78,7 @@ class StateMachine:
                 "candidate_set_id": artifact["new_candidate_set_id"],
                 "comparison_as_of": artifact["new_comparison_as_of"],
                 "source_cutoff_at": artifact["new_source_cutoff_at"],
+                "detailed_candidates": [],
                 "artifacts": [],
             }
         else:
@@ -94,6 +95,14 @@ class StateMachine:
                 {**state, "generation_id": state["active_generation_id"], "artifacts": [artifact]}
             )
             state["generation_history"][state["active_generation_id"]]["artifacts"].append(artifact)
+            if state["mode"] == "initial" and phase == 2:
+                state["generation_history"][state["active_generation_id"]][
+                    "detailed_candidates"
+                ] = artifact["payload"]["business_models"]["detailed_candidates"]
+            elif state["mode"] == "update" and phase == 1:
+                state["generation_history"][state["active_generation_id"]][
+                    "detailed_candidates"
+                ] = artifact["payload"]["update_diff"]["updated_detailed_candidates"]
             if state["mode"] == "initial" and phase == 10:
                 self._activate_initial_handoff(state, artifact["payload"]["final_selection"])
             elif state["mode"] == "update" and phase == 2:
@@ -129,6 +138,7 @@ class StateMachine:
             "payload"
         ]["session_and_candidates"]["theme"]
         candidates = selection.get("candidate_ids", [])
+        projected = self._project_handoff_context(state, candidates)
         return {
             "schema_version": "1.0.0",
             "handoff_id": reference["handoff_id"],
@@ -154,23 +164,127 @@ class StateMachine:
             "conditional_candidates": by_class["CONDITIONAL"],
             "watch_candidates": by_class["WATCH"],
             "excluded_candidates": by_class["EXCLUDED"],
-            "overall_decision": reference["overall_decision"],
+            "overall_decision": selection["overall_decision"],
             "ranking_by_horizon": selection.get("stored_rankings", {}),
             "common_scenarios": selection.get("scenario_probabilities", {}),
             "company_scenario_results": {
                 row["candidate_id"]: row for row in selection.get("scenario_results", [])
             },
-            "key_assumptions": [],
-            "shared_theme_risks": [],
-            "company_specific_risks": {candidate: [] for candidate in candidates},
-            "catalysts": {candidate: [] for candidate in candidates},
-            "valuation_ranges": {candidate: {"low": 0.0, "high": 0.0} for candidate in candidates},
-            "thesis_invalidation_conditions": {candidate: [] for candidate in candidates},
-            "confidence": {candidate: "low" for candidate in candidates},
-            "evidence_manifest": [],
+            **projected,
             "recommended_next_action": "個別株完全分析"
-            if reference["overall_decision"] == "SELECTION"
+            if selection["overall_decision"] == "SELECTION"
             else "NO_SELECTION",
+        }
+
+    def _project_handoff_context(
+        self, state: dict[str, Any], candidates: list[str]
+    ) -> dict[str, Any]:
+        if state["mode"] == "update" and state["active_handoff_id"] is not None:
+            previous = state["handoff_history"][state["active_handoff_id"]]
+            return {
+                "key_assumptions": previous["key_assumptions"],
+                "shared_theme_risks": previous["shared_theme_risks"],
+                "company_specific_risks": {
+                    candidate: previous["company_specific_risks"].get(candidate, ["not_evaluable"])
+                    for candidate in candidates
+                },
+                "catalysts": {
+                    candidate: previous["catalysts"].get(candidate, ["no_identified_catalyst"])
+                    for candidate in candidates
+                },
+                "valuation_ranges": {
+                    candidate: previous["valuation_ranges"].get(
+                        candidate,
+                        {
+                            "state": "not_evaluable",
+                            "method": None,
+                            "current_multiple": None,
+                            "implied_growth": None,
+                            "implied_margin": None,
+                        },
+                    )
+                    for candidate in candidates
+                },
+                "thesis_invalidation_conditions": {
+                    candidate: previous["thesis_invalidation_conditions"].get(
+                        candidate, ["not_evaluable"]
+                    )
+                    for candidate in candidates
+                },
+                "confidence": {
+                    candidate: previous["confidence"].get(candidate, "low")
+                    for candidate in candidates
+                },
+                "evidence_manifest": previous["evidence_manifest"],
+            }
+        artifacts = state["generation_history"][state["initial_generation_id"]]["artifacts"]
+        valuations = {
+            row["candidate_id"]: row
+            for row in artifacts[5]["payload"]["valuation_expectations"]["valuations"]
+        }
+        catalyst_rows = {
+            row["candidate_id"]: row for row in artifacts[7]["payload"]["catalysts"]["catalysts"]
+        }
+        risks = artifacts[8]["payload"]["risks_and_stress"]
+        risk_rows = {row["candidate_id"]: row for row in risks["company_risks"]}
+        assumptions = list(
+            dict.fromkeys(
+                assumption
+                for artifact in artifacts
+                for judgment in artifact["judgments"]
+                for assumption in judgment["assumptions"]
+            )
+        )
+        evidence_ids = list(
+            dict.fromkeys(
+                item["evidence_id"]
+                for artifact in artifacts
+                for collection in ("facts", "company_claims", "external_estimates")
+                for item in artifact[collection]
+            )
+        )
+        confidence_value = next(
+            (
+                judgment["confidence"]
+                for artifact in reversed(artifacts)
+                for judgment in artifact["judgments"]
+            ),
+            "low",
+        )
+        return {
+            "key_assumptions": assumptions,
+            "shared_theme_risks": risks["shared_theme_risks"],
+            "company_specific_risks": {
+                candidate: [
+                    risk_rows[candidate][key]
+                    for key in ("maximum_failure_path", "financing_failure_path", "dilution_path")
+                ]
+                for candidate in candidates
+            },
+            "catalysts": {
+                candidate: (
+                    [catalyst_rows[candidate]["event"]]
+                    if catalyst_rows[candidate]["status"] == "identified"
+                    else ["no_identified_catalyst"]
+                )
+                for candidate in candidates
+            },
+            "valuation_ranges": {
+                candidate: {
+                    "state": "observed",
+                    "method": valuations[candidate]["method"],
+                    "current_multiple": valuations[candidate]["current_multiple"],
+                    "implied_growth": valuations[candidate]["implied_growth"],
+                    "implied_margin": valuations[candidate]["implied_margin"],
+                }
+                for candidate in candidates
+            },
+            "thesis_invalidation_conditions": {
+                candidate: [risk_rows[candidate]["thesis_invalidation_condition"]]
+                for candidate in candidates
+            },
+            "confidence": {candidate: confidence_value for candidate in candidates},
+            "evidence_manifest": evidence_ids,
         }
 
     def _activate_initial_handoff(self, state: dict[str, Any], selection: dict[str, Any]) -> None:
@@ -249,6 +363,19 @@ class StateMachine:
             expected_mode = (
                 "initial" if generation_id == state["initial_generation_id"] else "update"
             )
+            previous_generation = None
+            if expected_mode == "update" and entry["artifacts"]:
+                previous_generation = entry["artifacts"][0]["payload"]["update_diff"][
+                    "old_generation"
+                ]["generation_id"]
+            historical_handoff = next(
+                (
+                    handoff_id
+                    for handoff_id, handoff in state["handoff_history"].items()
+                    if handoff["generation_id"] == previous_generation
+                ),
+                None,
+            )
             temporary = {
                 **state,
                 "active_generation_id": generation_id,
@@ -256,6 +383,13 @@ class StateMachine:
                 "candidate_set_id": entry["candidate_set_id"],
                 "comparison_as_of": entry["comparison_as_of"],
                 "source_cutoff_at": entry["source_cutoff_at"],
+                "previous_generation_id": previous_generation,
+                "active_handoff_id": historical_handoff,
+                "handoff_history": {
+                    handoff_id: handoff
+                    for handoff_id, handoff in state["handoff_history"].items()
+                    if handoff["generation_id"] != generation_id
+                },
                 "generation_history": {
                     **state["generation_history"],
                     generation_id: {**entry, "artifacts": []},
@@ -268,6 +402,5 @@ class StateMachine:
                 validate_envelope(
                     {**temporary, "generation_id": generation_id, "artifacts": [artifact]}
                 )
-                if expected_mode == "initial":
-                    validate_phase_artifact(temporary, artifact)
+                validate_phase_artifact(temporary, artifact)
                 temporary["generation_history"][generation_id]["artifacts"].append(artifact)

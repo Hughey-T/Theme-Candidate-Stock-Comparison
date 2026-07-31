@@ -2,15 +2,12 @@
 
 | Requirement | Implementation | Contract | Executable tests |
 |---|---|---|---|
-| Windows-safe packaged schemas | `schema_runtime.schema_bytes` | `src/theme_compare/schemas`, no symlink | wheel outside-checkout CI, regeneration test |
-| 12 closed Phase payloads | generator `phase_contracts` | phase-artifact `oneOf` | recursive closure, 12 valid, unknown/empty/type tests |
-| Detailed-candidate coverage | `phase_validation.exact` and Phase 10 coverage | Phase 2–10 arrays/maps | duplicate/missing/unknown coverage mutations |
-| Complete comparability matrix | normalized undirected pair/metric keys | Phase 2 matrix | duplicate/reverse/self/unknown/missing tests |
-| Mandatory semantics/history | dispatcher + `StateMachine._validate_generation_history` | state/phase schemas | 10+2 E2E, old generation tampering |
-| Strict JSON/finite | `models.strict_json_loads`, recursive finite checks | numeric constraints | NaN/Infinity/duplicate key/UTF-8 mutations |
-| Evidence registry | `validate_evidence`, payload-ref walker | const evidence classes | wrong class/reference/duplicate/future mutations |
-| Scenario and selection | `validate_scenarios`, initial/update selection dispatcher | Phase 7/10/Update 2 | annualized/weighted/month/ranking/classification mutations |
-| Automatic handoff lifecycle | StateMachine initial activation/update application | handoff/session state | Update E2E asserts old superseded/new active |
-| Typed handoff maps | generated handoff Schema + state coverage | fixed rankings/scenarios and typed candidate maps | handoff coverage mutations |
-| Exact publication | `publish/reconstruct` | publication manifest | missing/modified manifest, inventory/path/hash tests |
-| Reproducible CI | constraints + workflow | package resources | 3.11–3.13, quality, mutation, wheel E2E |
+| Repeated updates | `StateMachine.command` complete-generation transition | update-start | initial→g2→g3 E2E and handoff chain assertions |
+| Update candidate set | Update Phase 1 dispatcher/detail history | phase-artifact Update 1 | added/removed/retained/identity/set coverage |
+| Actual handoff projection | `_project_handoff_context` | typed handoff | valuation/catalyst/risk/invalidation/evidence/confidence E2E |
+| Update handoff equality | Update Phase 2 dispatcher/application | updated-selection | decision/classification/identity/reuse/supersession tests |
+| Historical update validation | `_validate_generation_history` replay context | state/phase schemas | g2 tampering after g3 mutation test |
+| Strict publication JSON | `strict_json_loads` at manifest/part/payload | publication manifest | duplicate/NaN/UTF-8/malformed mutations per layer |
+| Windows-safe packaged schemas | `schema_runtime.schema_bytes` | `src/theme_compare/schemas`, no symlink | wheel outside-checkout CI |
+| Candidate/matrix coverage | `phase_validation.exact` + normalized pair keys | Phase 2–10 | duplicate/missing/unknown/reverse/self mutations |
+| Reproducible CI | constraints + workflow | 11 packaged schemas/12 contracts | 3.11–3.13, quality, 130-test suite, wheel E2E |

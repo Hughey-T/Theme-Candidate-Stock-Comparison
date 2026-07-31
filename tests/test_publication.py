@@ -1,7 +1,9 @@
 import copy
+import base64
+import hashlib
 import json
 import pytest
-from theme_compare.models import SemanticError
+from theme_compare.models import SemanticError, canonical_bytes
 from theme_compare.publication import (
     publish,
     reconstruct,
@@ -101,6 +103,33 @@ def test_manifest_is_loaded_and_verified_from_disk(tmp_path, mutation):
         value = json.loads(path.read_text())
         value["unknown"] = True
         path.write_text(json.dumps(value))
+    with pytest.raises(SemanticError):
+        reconstruct(directory, manifest)
+
+
+@pytest.mark.parametrize("raw", [b'{"x":NaN}', b'{"x":1,"x":2}', b"\xff"])
+def test_publication_manifest_uses_strict_json(tmp_path, raw):
+    manifest = publish(tmp_path, {"x": 1}, context())
+    (tmp_path / "generations/g1/manifest.json").write_bytes(raw)
+    with pytest.raises(SemanticError):
+        reconstruct(tmp_path / "generations/g1", manifest)
+
+
+@pytest.mark.parametrize("layer", ["part", "payload"])
+def test_publication_part_and_payload_use_strict_json(tmp_path, layer):
+    manifest = publish(tmp_path, {"x": 1}, context())
+    directory = tmp_path / "generations/g1"
+    item = manifest["inventory"][0]
+    part_path = directory / item["path"]
+    if layer == "part":
+        raw = b'{"generation_id":"g1","generation_id":"g1"}'
+    else:
+        part = json.loads(part_path.read_text())
+        part["data"] = base64.b64encode(b'{"x":NaN}').decode()
+        raw = canonical_bytes(part)
+    part_path.write_bytes(raw)
+    item.update(size=len(raw), raw_sha256=hashlib.sha256(raw).hexdigest())
+    (directory / "manifest.json").write_bytes(canonical_bytes(manifest))
     with pytest.raises(SemanticError):
         reconstruct(directory, manifest)
 

@@ -135,6 +135,7 @@ def main():
         {
             "handoff_id": STRING,
             "generation_id": STRING,
+            "candidate_set_id": STRING,
             "status": {"enum": ["active", "superseded", "invalidated"]},
             "primary_candidate": {"type": ["string", "null"]},
             "secondary_candidate": {"type": ["string", "null"]},
@@ -466,6 +467,22 @@ def main():
                             {"path": STRING, "before": {}, "after": {}, "change": STRING}
                         ),
                     },
+                    "previous_detailed_candidates": candidate_ids,
+                    "updated_detailed_candidates": candidate_ids,
+                    "added_candidates": {"type": "array", "items": STRING, "uniqueItems": True},
+                    "removed_candidates": {"type": "array", "items": STRING, "uniqueItems": True},
+                    "retained_candidates": {"type": "array", "items": STRING, "uniqueItems": True},
+                    "normalized_candidates": {
+                        "type": "array",
+                        "items": candidate,
+                        "minItems": 1,
+                        "maxItems": 8,
+                    },
+                    "updated_candidate_set_id": STRING,
+                    "candidate_change_reasons": {
+                        "type": "array",
+                        "items": closed({"candidate_id": STRING, "reason": STRING}),
+                    },
                 }
             ),
         ),
@@ -577,7 +594,13 @@ def main():
             "valuation_ranges": {
                 "type": "object",
                 "additionalProperties": closed(
-                    {"low": {"type": "number"}, "high": {"type": "number"}}
+                    {
+                        "state": state_value,
+                        "method": {"type": ["string", "null"]},
+                        "current_multiple": {"type": ["number", "null"]},
+                        "implied_growth": {"type": ["number", "null"]},
+                        "implied_margin": {"type": ["number", "null"]},
+                    }
                 ),
             },
             "thesis_invalidation_conditions": {
@@ -597,6 +620,7 @@ def main():
             "candidate_set_id": STRING,
             "comparison_as_of": DT,
             "source_cutoff_at": DT,
+            "detailed_candidates": {"type": "array", "items": STRING, "uniqueItems": True},
             "artifacts": {"type": "array", "items": artifact},
         }
     )

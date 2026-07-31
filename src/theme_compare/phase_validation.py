@@ -57,6 +57,12 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
     artifacts = active_artifacts
 
     def detailed() -> set[str]:
+        if artifact["mode"] == "update":
+            candidates = state["generation_history"][state["active_generation_id"]].get(
+                "detailed_candidates", []
+            )
+            if candidates:
+                return set(candidates)
         initial_artifacts = state["generation_history"][state["initial_generation_id"]]["artifacts"]
         if len(initial_artifacts) < 2:
             raise SemanticError("Phase 2 detailed candidates unavailable")
@@ -276,6 +282,22 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
             or value["new_generation"]["generation_id"] != state["active_generation_id"]
         ):
             raise SemanticError("update generation lineage mismatch")
+        previous_entry = state["generation_history"][state["previous_generation_id"]]
+        previous = set(previous_entry["detailed_candidates"])
+        updated = set(value["updated_detailed_candidates"])
+        if set(value["previous_detailed_candidates"]) != previous:
+            raise SemanticError("previous detailed candidate mismatch")
+        if set(value["added_candidates"]) != updated - previous:
+            raise SemanticError("added candidate mismatch")
+        if set(value["removed_candidates"]) != previous - updated:
+            raise SemanticError("removed candidate mismatch")
+        if set(value["retained_candidates"]) != previous & updated:
+            raise SemanticError("retained candidate mismatch")
+        validate_candidates(value["normalized_candidates"], value["updated_candidate_set_id"])
+        if value["updated_candidate_set_id"] != state["candidate_set_id"]:
+            raise SemanticError("updated candidate set mismatch")
+        if not updated <= {row["candidate_id"] for row in value["normalized_candidates"]}:
+            raise SemanticError("updated candidate identity coverage mismatch")
     elif mode == "update" and phase == 2:
         value = payload["updated_selection"]
         if (
@@ -327,3 +349,45 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
                 "judgments": artifact["judgments"],
             }
         )
+        reference = value["updated_handoff"]
+        primary = next(
+            (
+                row["candidate_id"]
+                for row in value["classifications"]
+                if row["classification"] == "PRIMARY"
+            ),
+            None,
+        )
+        secondary = next(
+            (
+                row["candidate_id"]
+                for row in value["classifications"]
+                if row["classification"] == "SECONDARY"
+            ),
+            None,
+        )
+        classes = {
+            label: {
+                row["candidate_id"]
+                for row in value["classifications"]
+                if row["classification"] == label
+            }
+            for label in ("CONDITIONAL", "WATCH", "EXCLUDED")
+        }
+        old_id = state["active_handoff_id"]
+        if (
+            reference["overall_decision"] != decision
+            or reference["primary_candidate"] != primary
+            or reference["secondary_candidate"] != secondary
+            or set(reference["conditional_candidates"]) != classes["CONDITIONAL"]
+            or set(reference["watch_candidates"]) != classes["WATCH"]
+            or set(reference["excluded_candidates"]) != classes["EXCLUDED"]
+            or reference["generation_id"] != state["active_generation_id"]
+            or reference["candidate_set_id"] != state["candidate_set_id"]
+            or reference["supersedes"] != old_id
+            or reference["handoff_id"] == old_id
+            or reference["handoff_id"] in state["handoff_history"]
+        ):
+            raise SemanticError("updated handoff differs from validated selection or lifecycle")
+        if decision == "NO_SELECTION" and (primary is not None or secondary is not None):
+            raise SemanticError("NO_SELECTION updated handoff has selected candidates")

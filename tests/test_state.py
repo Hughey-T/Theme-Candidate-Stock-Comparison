@@ -19,6 +19,7 @@ def initial():
                 "candidate_set_id": SET_ID,
                 "comparison_as_of": TS,
                 "source_cutoff_at": TS,
+                "detailed_candidates": [],
                 "artifacts": [],
             }
         },
@@ -48,6 +49,21 @@ def test_initial_ten_phases_and_idempotency_guard(tmp_path):
     assert sm.load()["status"] == "complete"
     with pytest.raises(SemanticError):
         sm.command("次", artifact(10))
+
+
+def test_initial_handoff_projects_validated_phase_artifacts(tmp_path):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    handoff = sm.load()["handoff_history"]["h1"]
+    assert handoff["valuation_ranges"]["A"]["current_multiple"] == 10
+    assert handoff["valuation_ranges"]["A"]["state"] == "observed"
+    assert handoff["catalysts"]["A"] == ["earnings"]
+    assert "loss" in handoff["company_specific_risks"]["A"]
+    assert handoff["thesis_invalidation_conditions"]["A"] == ["demand"]
+    assert handoff["evidence_manifest"] == ["E1", "E2"]
+    assert handoff["confidence"]["A"] == "medium"
+    assert handoff["key_assumptions"] == ["demand persists"]
 
 
 @pytest.mark.parametrize("operation,phase", [("次", 2), ("bad", 1), ("更新", 1)])
@@ -83,6 +99,43 @@ def test_update_two_phases_preserves_generation(tmp_path):
     assert completed["handoff_history"]["h1"]["superseded_by"] == "h2"
     assert completed["handoff_history"]["h2"]["status"] == "active"
     assert completed["superseded_handoff_ids"] == ["h1"]
+
+
+def test_two_consecutive_update_generations_complete_and_chain_handoffs(tmp_path):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    sm.command(
+        "更新",
+        {
+            "new_generation_id": "g2",
+            "new_candidate_set_id": SET_ID,
+            "new_comparison_as_of": "2025-02-01T00:00:00Z",
+            "new_source_cutoff_at": "2025-01-31T00:00:00Z",
+            "previous_generation_id": "g1",
+        },
+    )
+    sm.command("次", artifact(1, "g2", "update", "2025-01-31T00:00:00Z"))
+    sm.command("次", artifact(2, "g2", "update", "2025-01-31T00:00:00Z"))
+    sm.command(
+        "更新",
+        {
+            "new_generation_id": "g3",
+            "new_candidate_set_id": SET_ID,
+            "new_comparison_as_of": "2025-03-01T00:00:00Z",
+            "new_source_cutoff_at": "2025-02-28T00:00:00Z",
+            "previous_generation_id": "g2",
+        },
+    )
+    sm.command("次", artifact(1, "g3", "update", "2025-02-28T00:00:00Z"))
+    sm.command("次", artifact(2, "g3", "update", "2025-02-28T00:00:00Z"))
+    state = sm.load()
+    assert set(state["generation_history"]) == {"g1", "g2", "g3"}
+    assert state["active_generation_id"] == "g3" and state["active_handoff_id"] == "h3"
+    assert state["superseded_handoff_ids"] == ["h1", "h2"]
+    assert state["handoff_history"]["h2"]["superseded_by"] == "h3"
+    assert state["handoff_history"]["h3"]["valuation_ranges"]["A"]["current_multiple"] == 10
+    assert state["handoff_history"]["h3"]["catalysts"]["A"] == ["earnings"]
 
 
 @pytest.mark.parametrize(
@@ -216,3 +269,32 @@ def test_payload_evidence_reference_uses_generation_registry(tmp_path):
     bad["payload"]["theme_value_capture"]["theme_purity"][0]["evidence_refs"] = ["UNKNOWN"]
     with pytest.raises(SemanticError, match="evidence"):
         sm.command("次", bad)
+
+
+def test_previous_update_semantic_tampering_is_detected_with_later_generation(tmp_path):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    for generation, previous, comparison, cutoff in (
+        ("g2", "g1", "2025-02-01T00:00:00Z", "2025-01-31T00:00:00Z"),
+        ("g3", "g2", "2025-03-01T00:00:00Z", "2025-02-28T00:00:00Z"),
+    ):
+        sm.command(
+            "更新",
+            {
+                "new_generation_id": generation,
+                "new_candidate_set_id": SET_ID,
+                "new_comparison_as_of": comparison,
+                "new_source_cutoff_at": cutoff,
+                "previous_generation_id": previous,
+            },
+        )
+        sm.command("次", artifact(1, generation, "update", cutoff))
+        sm.command("次", artifact(2, generation, "update", cutoff))
+    state = json.loads(sm.path.read_text())
+    state["generation_history"]["g2"]["artifacts"][1]["payload"]["updated_selection"][
+        "scenario_results"
+    ][0]["probability_weighted_annualized_return"] += 0.1
+    sm.path.write_text(json.dumps(state))
+    with pytest.raises(SemanticError):
+        sm.load()
