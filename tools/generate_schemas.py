@@ -753,6 +753,37 @@ def main():
             "superseded_handoff_ids": {"type": "array", "items": STRING, "uniqueItems": True},
         }
     )
+    state["properties"]["runtime_context"] = closed(
+        {
+            "theme": STRING,
+            "hypothesis": STRING,
+            "candidate_inputs": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "items": candidate,
+            },
+        }
+    )
+    upstream_handoff = closed(
+        {
+            "schema_version": {"const": "1.0.0"},
+            "theme": STRING,
+            "hypothesis": STRING,
+            "comparison_as_of": DT,
+            "source_cutoff_at": DT,
+            "candidate_inputs": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 12,
+                "uniqueItems": True,
+                "items": candidate,
+            },
+            "source_generation_id": STRING,
+            "source_session_id": STRING,
+            "evidence_refs": {"type": "array", "items": STRING, "uniqueItems": True},
+        }
+    )
     inventory = closed(
         {
             "path": STRING,
@@ -771,6 +802,7 @@ def main():
             }
         ),
         "normalized-candidate": candidate,
+        "upstream-theme-handoff": upstream_handoff,
         "session-state": state,
         "phase-artifact": artifact,
         "common-scenario": closed(

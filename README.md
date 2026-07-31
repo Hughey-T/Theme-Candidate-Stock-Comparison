@@ -43,3 +43,12 @@ pytest -q
 ```
 
 本runtimeは投資助言、具体的買値、分割購入、損切り、注文執行を提供しません。
+
+## 実際の利用方法（private runtime）
+
+1. `.env.example`から長いBearer secretと永続volumeを設定し、`docker build -t theme-compare .`でbuildします。
+2. HTTPS reverse proxyの背後でcontainerを起動し、`openapi/custom-gpt-action.openapi.yaml`のserver URLを置換してCustom GPT Actionsへimportします。
+3. Action認証をBearer API keyに設定し、`docs/custom-gpt-production-instructions.md`をGPT Instructionsへ追加します。
+4. 上流handoffから`POST /v1/sessions`を1回実行します。以後「次」はnext-contract取得→Custom GPTによる単一Phase調査→artifact submissionだけを行い、Initial完了後の「更新」は新generationを開始します。
+
+serviceは`GET /health`以外を認証し、stateを`THEME_COMPARE_STORAGE_ROOT`へsession単位でatomic保存します。endpoint、backup、secret rotation、Preview試験、更新手順の詳細は[`deploy/README.md`](deploy/README.md)を参照してください。

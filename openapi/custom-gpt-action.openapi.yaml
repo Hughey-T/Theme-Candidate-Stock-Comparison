@@ -1,0 +1,94 @@
+openapi: 3.1.0
+info:
+  title: Theme Candidate Comparison Private Runtime
+  version: 1.1.0
+  description: Custom GPT generates market research; this service only validates and persists it. Execute exactly one Phase per assistant response.
+servers:
+  - url: https://YOUR_PRIVATE_RUNTIME_HOST
+security: [{BearerAuth: []}]
+paths:
+  /health:
+    get:
+      operationId: getRuntimeHealth
+      security: []
+      responses: {'200': {description: Healthy}}
+  /v1/sessions:
+    post:
+      operationId: createComparisonSession
+      description: Create one session once for a new upstream handoff; does not execute a Phase.
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/CreateSession'}}}}
+      responses: {'201': {description: Session created, content: {application/json: {schema: {type: object}}}}, '401': {$ref: '#/components/responses/Unauthorized'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /v1/sessions/{session_id}:
+    parameters: [{$ref: '#/components/parameters/SessionId'}]
+    get:
+      operationId: getComparisonSession
+      responses: {'200': {description: Persisted normalized state summary, content: {application/json: {schema: {type: object}}}}, '401': {$ref: '#/components/responses/Unauthorized'}}
+  /v1/sessions/{session_id}/next-contract:
+    parameters: [{$ref: '#/components/parameters/SessionId'}]
+    get:
+      operationId: getNextPhaseContract
+      description: Fetch the sole authoritative contract, then generate exactly that one Phase in this response.
+      responses: {'200': {description: Next contract, content: {application/json: {schema: {type: object}}}}, '401': {$ref: '#/components/responses/Unauthorized'}}
+  /v1/sessions/{session_id}/phases:
+    parameters: [{$ref: '#/components/parameters/SessionId'}]
+    post:
+      operationId: submitComparisonPhase
+      description: Submit exactly one Phase artifact. Never submit multiple Phases in one assistant response.
+      requestBody: {required: true, content: {application/json: {schema: {type: object}}}}
+      responses: {'200': {description: Accepted Phase, content: {application/json: {schema: {type: object}}}}, '401': {$ref: '#/components/responses/Unauthorized'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /v1/sessions/{session_id}/updates:
+    parameters: [{$ref: '#/components/parameters/SessionId'}]
+    post:
+      operationId: startComparisonUpdate
+      description: Start one update generation; it has exactly two separately submitted Phases.
+      requestBody: {required: true, content: {application/json: {schema: {$ref: '#/components/schemas/StartUpdate'}}}}
+      responses: {'200': {description: Update started, content: {application/json: {schema: {type: object}}}}, '401': {$ref: '#/components/responses/Unauthorized'}, '422': {$ref: '#/components/responses/ValidationError'}}
+  /v1/sessions/{session_id}/handoff:
+    parameters: [{$ref: '#/components/parameters/SessionId'}]
+    get:
+      operationId: getActiveComparisonHandoff
+      parameters: [{name: include_history, in: query, schema: {type: boolean, default: false}}]
+      responses: {'200': {description: Active handoff v2 and optional history, content: {application/json: {schema: {type: object}}}}, '401': {$ref: '#/components/responses/Unauthorized'}}
+components:
+  securitySchemes:
+    BearerAuth: {type: http, scheme: bearer}
+  parameters:
+    SessionId: {name: session_id, in: path, required: true, schema: {type: string, pattern: '^s_[0-9a-f]{32}$'}}
+  responses:
+    Unauthorized: {description: Bearer API key missing or invalid}
+    ValidationError: {description: Structured retryable or terminal validation failure}
+  schemas:
+    Candidate:
+      type: object
+      additionalProperties: false
+      required: [candidate_id, issuer_id, issuer_name, ticker, exchange, share_class, is_adr, underlying_security_id, former_tickers, corporate_action_lineage, listing_country]
+      properties:
+        candidate_id: {type: string, minLength: 1}
+        issuer_id: {type: string, minLength: 1}
+        issuer_name: {type: string, minLength: 1}
+        ticker: {type: string, minLength: 1}
+        exchange: {type: string, minLength: 1}
+        share_class: {type: string, minLength: 1}
+        is_adr: {type: boolean}
+        underlying_security_id: {type: [string, 'null']}
+        former_tickers: {type: array, items: {type: string}, uniqueItems: true}
+        corporate_action_lineage: {type: array, items: {type: string}, uniqueItems: true}
+        listing_country: {type: string, minLength: 1}
+    CreateSession:
+      type: object
+      additionalProperties: false
+      required: [theme, hypothesis, comparison_as_of, source_cutoff_at, candidate_inputs]
+      properties:
+        theme: {type: string, minLength: 1}
+        hypothesis: {type: string, minLength: 1}
+        comparison_as_of: {type: string, format: date-time}
+        source_cutoff_at: {type: string, format: date-time}
+        candidate_inputs: {type: array, minItems: 1, maxItems: 12, items: {$ref: '#/components/schemas/Candidate'}}
+    StartUpdate:
+      type: object
+      additionalProperties: false
+      required: [new_comparison_as_of, new_source_cutoff_at, candidate_inputs]
+      properties:
+        new_comparison_as_of: {type: string, format: date-time}
+        new_source_cutoff_at: {type: string, format: date-time}
+        candidate_inputs: {type: array, minItems: 1, maxItems: 12, items: {$ref: '#/components/schemas/Candidate'}}
