@@ -52,3 +52,15 @@ pytest -q
 4. 上流handoffから`POST /v1/sessions`を1回実行します。以後「次」はnext-contract取得→Custom GPTによる単一Phase調査→artifact submissionだけを行い、Initial完了後の「更新」は新generationを開始します。
 
 serviceは`GET /health`以外を認証し、stateを`THEME_COMPARE_STORAGE_ROOT`へsession単位でatomic保存します。endpoint、backup、secret rotation、Preview試験、更新手順の詳細は[`deploy/README.md`](deploy/README.md)を参照してください。
+
+### Windows / Docker Desktop
+
+Production runtimeはLinux containerを正式サポート範囲とし、Windowsでは`fcntl`へ依存するPython processを直接起動せずDocker Desktopを使用します。PowerShell例:
+
+```powershell
+Copy-Item .env.example .env
+# .envのTHEME_COMPARE_API_KEYを十分長いrandom secretへ変更
+Docker build -t theme-compare:latest .
+Docker run -d --name theme-compare --env-file .env -p 127.0.0.1:8000:8000 -v theme-compare-data:/data/sessions theme-compare:latest
+Invoke-RestMethod http://127.0.0.1:8000/health
+```

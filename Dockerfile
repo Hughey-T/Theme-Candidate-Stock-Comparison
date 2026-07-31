@@ -1,8 +1,9 @@
 FROM python:3.13-slim AS build
 WORKDIR /build
-COPY pyproject.toml README.md ./
+COPY pyproject.toml README.md constraints-dev.txt ./
 COPY src ./src
-RUN pip wheel --no-cache-dir . -w /wheels
+RUN PIP_CONSTRAINT=constraints-dev.txt pip wheel --no-cache-dir . -w /wheels && \
+    python -c "import glob,zipfile,collections,pathlib; w=glob.glob('/wheels/theme_candidate*.whl')[0]; n=zipfile.ZipFile(w).namelist(); s=[x for x in n if x.startswith('theme_compare/schemas/')]; c=collections.Counter(s); e={'theme_compare/schemas/'+p.name for p in pathlib.Path('src/theme_compare/schemas').iterdir() if p.is_file()}; assert set(s)==e and all(v==1 for v in c.values()), (c,e)"
 
 FROM python:3.13-slim
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1 THEME_COMPARE_STORAGE_ROOT=/data/sessions

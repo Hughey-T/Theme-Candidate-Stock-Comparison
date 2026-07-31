@@ -28,3 +28,15 @@ Backup while writes are quiesced: `docker run --rm -v theme-compare-data:/data -
 Rotate secrets by generating a new random value, updating both service environment and GPT Action authentication, then restarting promptly. Inspect metadata-only service logs with `docker logs --since 1h theme-compare`; never enable body/header logging.
 
 To update, build a versioned image, run tests and its health check, stop the old container, start the new image with the same persistent volume, and verify an existing session. Keep an external backup before migration.
+
+## Windows / PowerShell
+
+Windows利用者の正式なproduction経路はLinux containers modeのDocker Desktopです。native Python runtimeのfile lockingはサポートしません。
+
+```powershell
+Copy-Item .env.example .env
+Docker build -t theme-compare:latest .
+Docker run -d --name theme-compare --restart unless-stopped --env-file .env `
+  -p 127.0.0.1:8000:8000 -v theme-compare-data:/data/sessions theme-compare:latest
+Invoke-RestMethod http://127.0.0.1:8000/health
+```

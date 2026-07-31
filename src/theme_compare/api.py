@@ -1,4 +1,4 @@
-"""Authenticated FastAPI connection layer for Custom GPT Actions."""
+"""Authenticated, factory-created FastAPI connection layer for Custom GPT Actions."""
 
 from __future__ import annotations
 
@@ -11,19 +11,24 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from .models import SemanticError, strict_json_loads
-from .runtime import RuntimeService
-from .storage import JsonVolumeStorage
+from .runtime import RuntimeIntegrityError, RuntimeService
+from .storage import JsonVolumeStorage, StorageError
 
 
-def create_app(storage: JsonVolumeStorage | None = None, api_key: str | None = None) -> FastAPI:
-    volume = storage or JsonVolumeStorage(
-        Path(os.environ.get("THEME_COMPARE_STORAGE_ROOT", "/data/sessions"))
-    )
-    expected_key = api_key if api_key is not None else os.environ.get("THEME_COMPARE_API_KEY", "")
-    service = RuntimeService(volume)
+def app_factory() -> FastAPI:
+    """Uvicorn factory; importing this module has no filesystem side effect."""
+    root = os.environ.get("THEME_COMPARE_STORAGE_ROOT")
+    if not root:
+        root = str(Path.home() / ".theme-compare" / "sessions")
+    return create_app(JsonVolumeStorage(Path(root)), os.environ.get("THEME_COMPARE_API_KEY"))
+
+
+def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
+    service = RuntimeService(storage)
+    expected_key = api_key or ""
     app = FastAPI(
         title="Theme Candidate Comparison Private Runtime",
-        version="1.1.0",
+        version="1.2.0",
         docs_url=None,
         redoc_url=None,
     )
@@ -46,34 +51,70 @@ def create_app(storage: JsonVolumeStorage | None = None, api_key: str | None = N
         value = strict_json_loads(await request.body())
         if not isinstance(value, dict):
             raise SemanticError("request body must be a JSON object")
+        request.state.generation_id = value.get("generation_id")
+        request.state.phase = value.get("phase")
         return value
 
-    @app.exception_handler(SemanticError)
-    async def semantic_error(_request: Request, exc: SemanticError) -> JSONResponse:
-        return JSONResponse(
-            status_code=422,
-            content={
-                "accepted": False,
-                "error": {"code": "validation_failed", "retryable": True, "message": str(exc)},
+    def error_content(request: Request, exc: Exception, *, terminal: bool) -> dict[str, Any]:
+        session_id = request.path_params.get("session_id")
+        stage = "persisted_state" if terminal else "request_or_transition"
+        return {
+            "accepted": False,
+            "error": {
+                "code": "integrity_failure" if terminal else "validation_failed",
+                "retryable": not terminal,
+                "terminal": terminal,
+                "stage": stage,
+                "message": str(exc),
+                "session_id": session_id,
+                "generation_id": getattr(request.state, "generation_id", None),
+                "phase": getattr(request.state, "phase", None),
+                "state_unchanged": True,
             },
-        )
+        }
+
+    @app.exception_handler(SemanticError)
+    async def semantic_error(request: Request, exc: SemanticError) -> JSONResponse:
+        return JSONResponse(status_code=422, content=error_content(request, exc, terminal=False))
+
+    @app.exception_handler(RuntimeIntegrityError)
+    async def runtime_integrity_error(request: Request, exc: RuntimeIntegrityError) -> JSONResponse:
+        return JSONResponse(status_code=422, content=error_content(request, exc, terminal=True))
+
+    @app.exception_handler(StorageError)
+    async def storage_error(request: Request, exc: StorageError) -> JSONResponse:
+        return JSONResponse(status_code=500, content=error_content(request, exc, terminal=True))
 
     @app.exception_handler(FileNotFoundError)
-    async def missing(_request: Request, _exc: FileNotFoundError) -> JSONResponse:
+    async def missing(request: Request, _exc: FileNotFoundError) -> JSONResponse:
         return JSONResponse(
             status_code=404,
             content={
+                "accepted": False,
                 "error": {
                     "code": "session_not_found",
                     "retryable": False,
+                    "terminal": False,
+                    "stage": "load",
                     "message": "session not found",
-                }
+                    "session_id": request.path_params.get("session_id"),
+                    "generation_id": None,
+                    "phase": None,
+                    "state_unchanged": True,
+                },
             },
         )
 
-    @app.get("/health")
-    def health() -> dict[str, Any]:
-        return {"service": "ok", "storage": volume.health()}
+    @app.get("/health", operation_id="getRuntimeHealth")
+    def health() -> JSONResponse:
+        healthy = storage.health()
+        return JSONResponse(
+            status_code=200 if healthy else 503,
+            content={
+                "service": "ok" if healthy else "unhealthy",
+                "storage": "ok" if healthy else "unhealthy",
+            },
+        )
 
     @app.post(
         "/v1/sessions",
@@ -125,6 +166,3 @@ def create_app(storage: JsonVolumeStorage | None = None, api_key: str | None = N
         return service.handoff(session_id, include_history)
 
     return app
-
-
-app = create_app()

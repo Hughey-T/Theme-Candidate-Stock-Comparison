@@ -465,6 +465,22 @@
                     "detail",
                     "handoff"
                   ]
+                },
+                "source_session_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "source_generation_id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "upstream_evidence_refs": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "uniqueItems": true
                 }
               },
               "required": [

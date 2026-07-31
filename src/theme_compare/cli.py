@@ -41,7 +41,7 @@ def main() -> None:
     if args.command == "serve":
         import uvicorn
 
-        uvicorn.run("theme_compare.api:app", host=args.host, port=args.port)
+        uvicorn.run("theme_compare.api:app_factory", host=args.host, port=args.port, factory=True)
     elif args.command == "create-session":
         print(
             json.dumps(
