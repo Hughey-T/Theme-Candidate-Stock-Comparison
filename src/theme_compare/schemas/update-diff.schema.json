@@ -1,0 +1,62 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "old_generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "new_generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "changes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "path": {
+            "type": "string",
+            "minLength": 1
+          },
+          "before": {},
+          "after": {},
+          "change": {
+            "enum": [
+              "added",
+              "removed",
+              "changed",
+              "classification_changed",
+              "ranking_changed",
+              "evidence_added",
+              "evidence_removed",
+              "assumption_changed",
+              "invalidation_triggered",
+              "comparability_changed",
+              "candidate_added",
+              "candidate_removed"
+            ]
+          }
+        },
+        "required": [
+          "path",
+          "before",
+          "after",
+          "change"
+        ]
+      }
+    },
+    "invalidated_handoff": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "old_generation_id",
+    "new_generation_id",
+    "changes",
+    "invalidated_handoff"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

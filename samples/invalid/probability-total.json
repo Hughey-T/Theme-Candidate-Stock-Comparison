@@ -1,0 +1,5 @@
+{
+  "sample_id": "probability-total",
+  "expected_valid": false,
+  "fixture": "tests executable mutation contract"
+}

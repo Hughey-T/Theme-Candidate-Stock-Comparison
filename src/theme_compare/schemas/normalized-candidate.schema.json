@@ -1,0 +1,73 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "issuer_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "issuer_name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "ticker": {
+      "type": "string",
+      "minLength": 1
+    },
+    "exchange": {
+      "type": "string",
+      "minLength": 1
+    },
+    "share_class": {
+      "type": "string",
+      "minLength": 1
+    },
+    "is_adr": {
+      "type": "boolean"
+    },
+    "underlying_security_id": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "former_tickers": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "corporate_action_lineage": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "listing_country": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "candidate_id",
+    "issuer_id",
+    "issuer_name",
+    "ticker",
+    "exchange",
+    "share_class",
+    "is_adr",
+    "underlying_security_id",
+    "former_tickers",
+    "corporate_action_lineage",
+    "listing_country"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

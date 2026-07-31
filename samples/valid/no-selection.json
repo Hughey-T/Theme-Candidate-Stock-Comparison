@@ -1,0 +1,5 @@
+{
+  "sample_id": "no-selection",
+  "expected_valid": true,
+  "fixture": "tests executable mutation contract"
+}

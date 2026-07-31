@@ -1,0 +1,5 @@
+{
+  "sample_id": "invalid-data-state",
+  "expected_valid": false,
+  "fixture": "tests executable mutation contract"
+}

@@ -1,0 +1,54 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "classifications": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "classification": {
+            "enum": [
+              "PRIMARY",
+              "SECONDARY",
+              "CONDITIONAL",
+              "WATCH",
+              "EXCLUDED"
+            ]
+          }
+        },
+        "required": [
+          "candidate_id",
+          "classification"
+        ]
+      }
+    },
+    "overall_decision": {
+      "enum": [
+        "SELECTION",
+        "NO_SELECTION"
+      ]
+    },
+    "hard_gates": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    }
+  },
+  "required": [
+    "classifications",
+    "overall_decision",
+    "hard_gates"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

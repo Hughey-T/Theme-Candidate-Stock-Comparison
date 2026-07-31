@@ -1,0 +1,5 @@
+{
+  "sample_id": "same-industry-5",
+  "expected_valid": true,
+  "fixture": "tests executable mutation contract"
+}

@@ -1,0 +1,5 @@
+{
+  "sample_id": "mixed-generation",
+  "expected_valid": false,
+  "fixture": "tests executable mutation contract"
+}

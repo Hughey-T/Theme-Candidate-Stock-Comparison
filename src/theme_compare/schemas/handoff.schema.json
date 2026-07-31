@@ -1,0 +1,770 @@
+{
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "type": "string",
+      "minLength": 1
+    },
+    "handoff_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "session_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "generation_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "candidate_set_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "theme": {
+      "type": "string",
+      "minLength": 1
+    },
+    "comparison_as_of": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "source_cutoff_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "created_at": {
+      "type": "string",
+      "format": "date-time",
+      "pattern": "(Z|[+-]\\d\\d:\\d\\d)$"
+    },
+    "status": {
+      "enum": [
+        "active",
+        "superseded",
+        "invalidated"
+      ]
+    },
+    "supersedes": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "superseded_by": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "invalidated_at": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "format": "date-time"
+    },
+    "invalidation_reason": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "investment_horizon": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "tactical": {
+          "const": "6-12 months"
+        },
+        "structural": {
+          "const": "2-3 years"
+        }
+      },
+      "required": [
+        "tactical",
+        "structural"
+      ]
+    },
+    "primary_candidate": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "secondary_candidate": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "conditional_candidates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "watch_candidates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "excluded_candidates": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "overall_decision": {
+      "enum": [
+        "SELECTION",
+        "NO_SELECTION"
+      ]
+    },
+    "ranking_by_horizon": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "company_quality": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "tactical": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "structural": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "risk_adjusted": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        },
+        "portfolio_fit": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "minItems": 1,
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "company_quality",
+        "tactical",
+        "structural",
+        "risk_adjusted",
+        "portfolio_fit"
+      ]
+    },
+    "common_scenarios": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "THEME_BEAR": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "THEME_BASE": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "THEME_BULL": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        }
+      },
+      "required": [
+        "THEME_BEAR",
+        "THEME_BASE",
+        "THEME_BULL"
+      ]
+    },
+    "company_scenario_results": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "candidate_id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "scenarios": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "THEME_BEAR": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "current_price": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "target_price": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "dividend": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "diluted_shares": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "realization_months": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "total_return": {
+                    "type": "number"
+                  },
+                  "annualized_return": {
+                    "type": "number"
+                  },
+                  "permanent_loss": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "current_price",
+                  "target_price",
+                  "dividend",
+                  "diluted_shares",
+                  "realization_months",
+                  "total_return",
+                  "annualized_return",
+                  "permanent_loss"
+                ]
+              },
+              "THEME_BASE": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "current_price": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "target_price": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "dividend": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "diluted_shares": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "realization_months": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "total_return": {
+                    "type": "number"
+                  },
+                  "annualized_return": {
+                    "type": "number"
+                  },
+                  "permanent_loss": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "current_price",
+                  "target_price",
+                  "dividend",
+                  "diluted_shares",
+                  "realization_months",
+                  "total_return",
+                  "annualized_return",
+                  "permanent_loss"
+                ]
+              },
+              "THEME_BULL": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                  "current_price": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "target_price": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "dividend": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "diluted_shares": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "realization_months": {
+                    "type": "number",
+                    "exclusiveMinimum": 0
+                  },
+                  "total_return": {
+                    "type": "number"
+                  },
+                  "annualized_return": {
+                    "type": "number"
+                  },
+                  "permanent_loss": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "current_price",
+                  "target_price",
+                  "dividend",
+                  "diluted_shares",
+                  "realization_months",
+                  "total_return",
+                  "annualized_return",
+                  "permanent_loss"
+                ]
+              }
+            },
+            "required": [
+              "THEME_BEAR",
+              "THEME_BASE",
+              "THEME_BULL"
+            ]
+          },
+          "probability_weighted_return": {
+            "type": "number"
+          },
+          "probability_weighted_annualized_return": {
+            "type": "number"
+          },
+          "expected_realization_months": {
+            "type": "number",
+            "exclusiveMinimum": 0
+          },
+          "downside_probability": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "permanent_loss_probability": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        },
+        "required": [
+          "candidate_id",
+          "scenarios",
+          "probability_weighted_return",
+          "probability_weighted_annualized_return",
+          "expected_realization_months",
+          "downside_probability",
+          "permanent_loss_probability"
+        ]
+      }
+    },
+    "key_assumptions": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "candidate_assumptions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
+      }
+    },
+    "shared_theme_risks": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "company_specific_risks": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "observed",
+              "not_evaluable",
+              "not_applicable"
+            ]
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "state",
+          "values"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "not_evaluable",
+                    "not_applicable"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "values": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "catalysts": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "identified",
+              "no_identified_catalyst",
+              "not_evaluable",
+              "not_applicable"
+            ]
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "state",
+          "values"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "identified"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "values": {
+                  "minItems": 1
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "values": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "valuation_ranges": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "observed",
+              "estimated",
+              "not_disclosed",
+              "not_applicable",
+              "not_evaluable",
+              "conflicting_sources",
+              "stale",
+              "missing"
+            ]
+          },
+          "method": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "current_multiple": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "implied_growth": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "implied_margin": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "state",
+          "method",
+          "current_multiple",
+          "implied_growth",
+          "implied_margin"
+        ]
+      }
+    },
+    "thesis_invalidation_conditions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "observed",
+              "not_evaluable",
+              "not_applicable"
+            ]
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "state",
+          "values"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "not_evaluable",
+                    "not_applicable"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "values": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "observed",
+              "estimated",
+              "not_evaluable",
+              "not_applicable"
+            ]
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              null
+            ]
+          }
+        },
+        "required": [
+          "state",
+          "value"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "observed",
+                    "estimated"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "value": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "value": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "global_evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "candidate_evidence_refs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
+      }
+    },
+    "evidence_manifest": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "recommended_next_action": {
+      "type": "string",
+      "minLength": 1
+    }
+  },
+  "required": [
+    "schema_version",
+    "handoff_id",
+    "session_id",
+    "generation_id",
+    "candidate_set_id",
+    "theme",
+    "comparison_as_of",
+    "source_cutoff_at",
+    "created_at",
+    "status",
+    "supersedes",
+    "superseded_by",
+    "invalidated_at",
+    "invalidation_reason",
+    "investment_horizon",
+    "primary_candidate",
+    "secondary_candidate",
+    "conditional_candidates",
+    "watch_candidates",
+    "excluded_candidates",
+    "overall_decision",
+    "ranking_by_horizon",
+    "common_scenarios",
+    "company_scenario_results",
+    "key_assumptions",
+    "candidate_assumptions",
+    "shared_theme_risks",
+    "company_specific_risks",
+    "catalysts",
+    "valuation_ranges",
+    "thesis_invalidation_conditions",
+    "confidence",
+    "global_evidence_refs",
+    "candidate_evidence_refs",
+    "evidence_manifest",
+    "recommended_next_action"
+  ],
+  "$schema": "https://json-schema.org/draft/2020-12/schema"
+}

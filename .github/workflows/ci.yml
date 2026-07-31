@@ -1,0 +1,41 @@
+name: CI
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  unit:
+    strategy:
+      matrix:
+        python: ['3.11', '3.12', '3.13']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '${{ matrix.python }}'}
+      - run: PIP_CONSTRAINT=constraints-dev.txt python -m pip install -e '.[dev]'
+      - run: pytest -q
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: '3.13'}
+      - run: PIP_CONSTRAINT=constraints-dev.txt python -m pip install -e '.[dev]'
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: mypy src
+      - name: Schema samples and representative mutation suite
+        run: pytest -q tests/test_schemas.py tests/test_samples.py tests/test_semantics.py tests/test_publication.py
+  fresh-clone-e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: {path: clean}
+      - run: python -m venv /tmp/theme-venv && cd clean && PIP_CONSTRAINT=constraints-dev.txt /tmp/theme-venv/bin/pip wheel '.[dev]' -w /tmp/wheels
+      - run: PIP_CONSTRAINT=clean/constraints-dev.txt /tmp/theme-venv/bin/pip install /tmp/wheels/*.whl
+      - name: Import wheel and packaged schemas outside checkout
+        run: cd /tmp && /tmp/theme-venv/bin/python -c "from theme_compare.schema_runtime import schema_bytes; from theme_compare.state import StateMachine; assert b'oneOf' in schema_bytes('phase-artifact')"
+      - run: cd clean && /tmp/theme-venv/bin/pytest -q tests/test_state.py tests/test_publication.py
