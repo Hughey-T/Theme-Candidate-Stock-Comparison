@@ -147,16 +147,9 @@ def main():
         }
     )
     update_state = {
-        "enum": [
-            "changed",
-            "unchanged",
-            "added",
-            "removed",
-            "not_evaluable",
-            "not_applicable",
-            "no_identified_catalyst",
-        ]
+        "enum": ["changed", "unchanged", "added", "removed", "not_evaluable", "not_applicable"]
     }
+    catalyst_state = {"enum": [*update_state["enum"], "no_identified_catalyst"]}
     string_change = closed(
         {"state": update_state, "values": {"type": "array", "items": STRING, "uniqueItems": True}}
     )
@@ -174,7 +167,12 @@ def main():
         {
             "candidate_id": STRING,
             "valuation": valuation_change,
-            "catalysts": string_change,
+            "catalysts": closed(
+                {
+                    "state": catalyst_state,
+                    "values": {"type": "array", "items": STRING, "uniqueItems": True},
+                }
+            ),
             "company_specific_risks": string_change,
             "thesis_invalidation_conditions": string_change,
             "confidence": closed(

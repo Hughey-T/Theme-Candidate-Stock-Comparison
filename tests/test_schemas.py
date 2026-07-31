@@ -143,6 +143,17 @@ def test_candidate_level_no_selection_rejected_by_schema():
 
 
 @pytest.mark.parametrize(
+    "field", ["valuation", "company_specific_risks", "confidence", "evidence_refs", "assumptions"]
+)
+def test_no_identified_catalyst_is_only_valid_for_catalyst(field):
+    schema = json.loads((ROOT / "src/theme_compare/schemas/phase-artifact.schema.json").read_text())
+    document = valid_artifact(1, "g2", "update", "2025-01-31T00:00:00Z")
+    change = document["payload"]["update_diff"]["handoff_context_changes"]["candidate_changes"][0]
+    change[field]["state"] = "no_identified_catalyst"
+    assert list(Draft202012Validator(schema).iter_errors(document))
+
+
+@pytest.mark.parametrize(
     "mutation",
     ["required", "wrong_type", "wrong_phase_payload", "candidate_count", "phase10_incomplete"],
 )

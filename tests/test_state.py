@@ -241,6 +241,92 @@ def test_update_cutoff_one_second_later_is_accepted(tmp_path):
     assert state["active_generation_id"] == "g2"
 
 
+@pytest.mark.parametrize(
+    "field",
+    [
+        "old_candidate_set",
+        "old_comparison",
+        "old_cutoff",
+        "new_candidate_set",
+        "new_comparison",
+        "new_cutoff",
+    ],
+)
+def test_update_phase1_generation_metadata_must_match_state(tmp_path, field):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    sm.command(
+        "更新",
+        {
+            "new_generation_id": "g2",
+            "new_candidate_set_id": SET_ID,
+            "new_comparison_as_of": "2025-02-01T00:00:00Z",
+            "new_source_cutoff_at": "2025-01-31T00:00:00Z",
+            "previous_generation_id": "g1",
+        },
+    )
+    bad = artifact(1, "g2", "update", "2025-01-31T00:00:00Z")
+    old, new = (
+        bad["payload"]["update_diff"]["old_generation"],
+        bad["payload"]["update_diff"]["new_generation"],
+    )
+    target, key = {
+        "old_candidate_set": (old, "candidate_set_id"),
+        "old_comparison": (old, "comparison_as_of"),
+        "old_cutoff": (old, "source_cutoff_at"),
+        "new_candidate_set": (new, "candidate_set_id"),
+        "new_comparison": (new, "comparison_as_of"),
+        "new_cutoff": (new, "source_cutoff_at"),
+    }[field]
+    target[key] = "tampered" if "candidate" in field else "2024-01-01T00:00:00Z"
+    with pytest.raises(SemanticError, match="metadata"):
+        sm.command("次", bad)
+
+
+@pytest.mark.parametrize(
+    "mutation",
+    [
+        "unchanged_value",
+        "retained_added",
+        "valuation_unavailable",
+        "catalyst_empty",
+        "catalyst_none_with_value",
+        "evidence_removed_unknown",
+    ],
+)
+def test_update_context_state_value_contradictions_rejected(tmp_path, mutation):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    sm.command(
+        "更新",
+        {
+            "new_generation_id": "g2",
+            "new_candidate_set_id": SET_ID,
+            "new_comparison_as_of": "2025-02-01T00:00:00Z",
+            "new_source_cutoff_at": "2025-01-31T00:00:00Z",
+            "previous_generation_id": "g1",
+        },
+    )
+    bad = artifact(1, "g2", "update", "2025-01-31T00:00:00Z")
+    change = bad["payload"]["update_diff"]["handoff_context_changes"]["candidate_changes"][0]
+    if mutation == "unchanged_value":
+        change["valuation"]["state"] = "unchanged"
+    elif mutation == "retained_added":
+        change["confidence"]["state"] = "added"
+    elif mutation == "valuation_unavailable":
+        change["valuation"]["state"] = "not_evaluable"
+    elif mutation == "catalyst_empty":
+        change["catalysts"] = {"state": "changed", "values": []}
+    elif mutation == "catalyst_none_with_value":
+        change["catalysts"] = {"state": "no_identified_catalyst", "values": ["x"]}
+    else:
+        change["evidence_refs"] = {"state": "removed", "values": ["UNKNOWN"]}
+    with pytest.raises(SemanticError):
+        sm.command("次", bad)
+
+
 def test_interrupted_resume_reads_disk(tmp_path):
     sm = machine(tmp_path)
     sm.command("次", artifact(1))

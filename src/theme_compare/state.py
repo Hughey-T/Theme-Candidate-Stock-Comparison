@@ -245,7 +245,9 @@ class StateMachine:
                 ):
                     item = candidate_change[source]
                     if changed(item):
-                        projected[target][candidate] = item["values"] or [item["state"]]
+                        projected[target][candidate] = (
+                            [] if item["state"] == "removed" else item["values"] or [item["state"]]
+                        )
                 catalyst = candidate_change["catalysts"]
                 if changed(catalyst):
                     projected["catalysts"][candidate] = (
@@ -262,7 +264,9 @@ class StateMachine:
                 projected["key_assumptions"] = changes["key_assumptions"]["values"]
             for candidate_change in changes["candidate_changes"]:
                 assumptions = candidate_change["assumptions"]
-                if assumptions["state"] in ("added", "changed"):
+                if assumptions["state"] == "changed":
+                    projected["key_assumptions"] = assumptions["values"]
+                elif assumptions["state"] == "added":
                     projected["key_assumptions"] = list(
                         dict.fromkeys([*projected["key_assumptions"], *assumptions["values"]])
                     )
@@ -273,7 +277,9 @@ class StateMachine:
                         if value not in assumptions["values"]
                     ]
                 evidence = candidate_change["evidence_refs"]
-                if evidence["state"] in ("added", "changed"):
+                if evidence["state"] == "changed":
+                    projected["evidence_manifest"] = evidence["values"]
+                elif evidence["state"] == "added":
                     projected["evidence_manifest"] = list(
                         dict.fromkeys([*projected["evidence_manifest"], *evidence["values"]])
                     )

@@ -2,6 +2,8 @@
 
 任意のcomplete generation（initialまたはupdate）から次のupdateを開始できる。Update startは未使用generation ID、activeと一致するprevious generation、UTC instantで単調非減少のcomparison as-of、previousより厳密に新しいsource cutoffを要求する。同一instantの異なるoffset表記、cutoff逆行、future cutoffを拒否し、generation historyは上書きしない。
 
-Update Phase 1はprevious/updated/added/removed/retained detailed candidates、normalized identities、updated candidate-set ID、change reasons、recursive diffを保持する。さらにcandidate別valuation/catalyst/risk/invalidation/confidence/evidence/assumptionとshared theme risks/key assumptionsのhandoff context changeを、changed/unchanged/added/removed/not_evaluable/not_applicable/no_identified_catalyst状態で保持する。
+Update Phase 1はprevious/updated/added/removed/retained detailed candidates、normalized identities、updated candidate-set ID、change reasons、recursive diffを保持する。old/new generationのcandidate-set ID、comparison as-of、source cutoffはstate historyと完全一致しなければならない。さらにcandidate別valuation/catalyst/risk/invalidation/confidence/evidence/assumptionとshared theme risks/key assumptionsのhandoff context changeを、changed/unchanged/added/removed/not_evaluable/not_applicable状態で保持する。`no_identified_catalyst`はcatalystにだけ許可する。
+
+Runtimeはstate名だけを信用せず、unchanged/changedと前値の一致・不一致、added/removedの前値存在性、not_evaluable/not_applicableのnull/empty制約、catalystのidentified/noneとvalues、evidence/assumptionの差分を再検証する。added/retained/removed candidateとcontext stateの組合せもcandidate deltaから検証する。
 
 Update handoffはprevious validated handoffを基底に、validated context changesを適用し、removed candidateを除き、added candidateを明示stateで追加してからcoverageを検証する。Unchangedだけを継承する。Update Phase 2はselectionを再計算し、new handoff ID未使用、active generation/set、old active IDとのsupersedes、decisionと全classification集合を検証し、同じatomic writeでoldをsuperseded、新handoffをactiveにする。

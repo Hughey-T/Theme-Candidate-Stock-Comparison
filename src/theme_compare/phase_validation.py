@@ -284,6 +284,17 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
         ):
             raise SemanticError("update generation lineage mismatch")
         previous_entry = state["generation_history"][state["previous_generation_id"]]
+        old_metadata = value["old_generation"]
+        new_metadata = value["new_generation"]
+        if (
+            old_metadata["candidate_set_id"] != previous_entry["candidate_set_id"]
+            or old_metadata["comparison_as_of"] != previous_entry["comparison_as_of"]
+            or old_metadata["source_cutoff_at"] != previous_entry["source_cutoff_at"]
+            or new_metadata["candidate_set_id"] != state["candidate_set_id"]
+            or new_metadata["comparison_as_of"] != state["comparison_as_of"]
+            or new_metadata["source_cutoff_at"] != state["source_cutoff_at"]
+        ):
+            raise SemanticError("update generation metadata mismatch")
         previous = set(previous_entry["detailed_candidates"])
         updated = set(value["updated_detailed_candidates"])
         if set(value["previous_detailed_candidates"]) != previous:
@@ -304,6 +315,144 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
         ]
         if len(context_ids) != len(set(context_ids)) or set(context_ids) != updated:
             raise SemanticError("handoff context candidate coverage mismatch")
+        previous_handoff = state["handoff_history"].get(state["active_handoff_id"])
+        if previous_handoff is None:
+            raise SemanticError("update context requires previous active handoff")
+        added = set(value["added_candidates"])
+        retained = set(value["retained_candidates"])
+
+        def validate_list_change(
+            item: dict[str, Any], previous_value: list[str] | None, field: str
+        ) -> None:
+            update_state = item["state"]
+            values = item["values"]
+            if update_state == "unchanged" and values != (previous_value or []):
+                raise SemanticError(f"{field} unchanged value mismatch")
+            if update_state == "changed" and values == (previous_value or []):
+                raise SemanticError(f"{field} changed value did not change")
+            if update_state == "added" and (previous_value is not None or not values):
+                raise SemanticError(f"{field} invalid added state")
+            if update_state == "removed" and (previous_value is None or values):
+                raise SemanticError(f"{field} invalid removed state")
+            if update_state in ("not_evaluable", "not_applicable") and values:
+                raise SemanticError(f"{field} unavailable state has values")
+
+        def validate_set_delta(item: dict[str, Any], previous_value: list[str], field: str) -> None:
+            update_state, values = item["state"], item["values"]
+            previous_set, value_set = set(previous_value), set(values)
+            if update_state == "unchanged" and values != previous_value:
+                raise SemanticError(f"{field} unchanged value mismatch")
+            if update_state == "changed" and value_set == previous_set:
+                raise SemanticError(f"{field} changed value did not change")
+            if update_state == "added" and (not value_set or value_set & previous_set):
+                raise SemanticError(f"{field} added values already exist")
+            if update_state == "removed" and (not value_set or not value_set <= previous_set):
+                raise SemanticError(f"{field} removed values do not match previous")
+            if update_state in ("not_evaluable", "not_applicable") and values:
+                raise SemanticError(f"{field} unavailable state has values")
+
+        for change in value["handoff_context_changes"]["candidate_changes"]:
+            candidate = change["candidate_id"]
+            states = [
+                change[field]["state"]
+                for field in (
+                    "valuation",
+                    "catalysts",
+                    "company_specific_risks",
+                    "thesis_invalidation_conditions",
+                    "confidence",
+                    "evidence_refs",
+                    "assumptions",
+                )
+            ]
+            if candidate in added and "unchanged" in states:
+                raise SemanticError("added candidate cannot contain unchanged context")
+            if candidate in added and any(
+                state not in ("added", "not_evaluable", "not_applicable", "no_identified_catalyst")
+                for state in states
+            ):
+                raise SemanticError("added candidate has an invalid context state")
+            if candidate in retained and "added" in states:
+                raise SemanticError("retained candidate cannot contain added context")
+            valuation = change["valuation"]
+            previous_valuation = previous_handoff["valuation_ranges"].get(candidate)
+            current_valuation = {
+                "state": valuation["data_state"],
+                "method": valuation["method"],
+                "current_multiple": valuation["current_multiple"],
+                "implied_growth": valuation["implied_growth"],
+                "implied_margin": valuation["implied_margin"],
+            }
+            if valuation["state"] == "unchanged" and current_valuation != previous_valuation:
+                raise SemanticError("valuation unchanged value mismatch")
+            if valuation["state"] == "changed" and current_valuation == previous_valuation:
+                raise SemanticError("valuation changed value did not change")
+            if valuation["state"] == "added" and previous_valuation is not None:
+                raise SemanticError("valuation added but previous value exists")
+            if valuation["state"] == "added" and all(
+                valuation[field] is None
+                for field in ("method", "current_multiple", "implied_growth", "implied_margin")
+            ):
+                raise SemanticError("valuation added without a value")
+            if valuation["state"] == "removed" and previous_valuation is None:
+                raise SemanticError("valuation removed but previous value is absent")
+            if valuation["state"] in ("removed", "not_evaluable", "not_applicable") and any(
+                valuation[field] is not None
+                for field in ("method", "current_multiple", "implied_growth", "implied_margin")
+            ):
+                raise SemanticError("unavailable valuation contains a value")
+            if (
+                valuation["state"] in ("not_evaluable", "not_applicable")
+                and valuation["data_state"] != valuation["state"]
+            ):
+                raise SemanticError("valuation state/data-state mismatch")
+            catalyst = change["catalysts"]
+            if catalyst["state"] == "no_identified_catalyst" and catalyst["values"]:
+                raise SemanticError("no-identified-catalyst contains values")
+            if catalyst["state"] in ("changed", "added") and not catalyst["values"]:
+                raise SemanticError("identified catalyst requires values")
+            for field, previous_map in (
+                ("catalysts", previous_handoff["catalysts"]),
+                ("company_specific_risks", previous_handoff["company_specific_risks"]),
+                (
+                    "thesis_invalidation_conditions",
+                    previous_handoff["thesis_invalidation_conditions"],
+                ),
+            ):
+                validate_list_change(change[field], previous_map.get(candidate), field)
+            confidence = change["confidence"]
+            previous_confidence = previous_handoff["confidence"].get(candidate)
+            if confidence["state"] == "unchanged" and confidence["value"] != previous_confidence:
+                raise SemanticError("confidence unchanged value mismatch")
+            if confidence["state"] == "changed" and confidence["value"] == previous_confidence:
+                raise SemanticError("confidence changed value did not change")
+            if confidence["state"] == "added" and (
+                previous_confidence is not None or confidence["value"] is None
+            ):
+                raise SemanticError("confidence invalid added state")
+            if confidence["state"] == "removed" and previous_confidence is None:
+                raise SemanticError("confidence removed but previous value is absent")
+            if (
+                confidence["state"] in ("removed", "not_evaluable", "not_applicable")
+                and confidence["value"] is not None
+            ):
+                raise SemanticError("unavailable confidence contains value")
+            validate_set_delta(
+                change["evidence_refs"], previous_handoff["evidence_manifest"], "evidence_refs"
+            )
+            validate_set_delta(
+                change["assumptions"], previous_handoff["key_assumptions"], "assumptions"
+            )
+        validate_list_change(
+            value["handoff_context_changes"]["shared_theme_risks"],
+            previous_handoff["shared_theme_risks"],
+            "shared_theme_risks",
+        )
+        validate_set_delta(
+            value["handoff_context_changes"]["key_assumptions"],
+            previous_handoff["key_assumptions"],
+            "key_assumptions",
+        )
     elif mode == "update" and phase == 2:
         value = payload["updated_selection"]
         if (
