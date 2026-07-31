@@ -143,6 +143,20 @@ def test_candidate_level_no_selection_rejected_by_schema():
 
 
 @pytest.mark.parametrize(
+    "field,value",
+    [
+        ("confidence", {"state": "not_evaluable", "value": "low"}),
+        ("catalysts", {"state": "no_identified_catalyst", "values": ["removed"]}),
+        ("company_specific_risks", {"state": "not_evaluable", "values": ["removed"]}),
+    ],
+)
+def test_handoff_snapshot_state_value_contract(field, value):
+    schema = json.loads((ROOT / "src/theme_compare/schemas/handoff.schema.json").read_text())
+    snapshot_schema = schema["properties"][field]["additionalProperties"]
+    assert list(Draft202012Validator(snapshot_schema).iter_errors(value))
+
+
+@pytest.mark.parametrize(
     "field", ["valuation", "company_specific_risks", "confidence", "evidence_refs", "assumptions"]
 )
 def test_no_identified_catalyst_is_only_valid_for_catalyst(field):

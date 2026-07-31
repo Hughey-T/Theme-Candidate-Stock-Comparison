@@ -140,7 +140,7 @@ class StateMachine:
         candidates = selection.get("candidate_ids", [])
         projected = self._project_handoff_context(state, candidates)
         return {
-            "schema_version": "1.0.0",
+            "schema_version": "2.0.0",
             "handoff_id": reference["handoff_id"],
             "session_id": state["session_id"],
             "generation_id": state["active_generation_id"],
@@ -181,15 +181,23 @@ class StateMachine:
     ) -> dict[str, Any]:
         if state["mode"] == "update" and state["active_handoff_id"] is not None:
             previous = state["handoff_history"][state["active_handoff_id"]]
-            projected = {
-                "key_assumptions": previous["key_assumptions"],
-                "shared_theme_risks": previous["shared_theme_risks"],
+            projected: dict[str, Any] = {
+                "key_assumptions": list(previous["key_assumptions"]),
+                "candidate_assumptions": {
+                    candidate: list(previous["candidate_assumptions"].get(candidate, []))
+                    for candidate in candidates
+                },
+                "shared_theme_risks": list(previous["shared_theme_risks"]),
                 "company_specific_risks": {
-                    candidate: previous["company_specific_risks"].get(candidate, ["not_evaluable"])
+                    candidate: previous["company_specific_risks"].get(
+                        candidate, {"state": "not_evaluable", "values": []}
+                    )
                     for candidate in candidates
                 },
                 "catalysts": {
-                    candidate: previous["catalysts"].get(candidate, ["no_identified_catalyst"])
+                    candidate: previous["catalysts"].get(
+                        candidate, {"state": "not_evaluable", "values": []}
+                    )
                     for candidate in candidates
                 },
                 "valuation_ranges": {
@@ -207,15 +215,21 @@ class StateMachine:
                 },
                 "thesis_invalidation_conditions": {
                     candidate: previous["thesis_invalidation_conditions"].get(
-                        candidate, ["not_evaluable"]
+                        candidate, {"state": "not_evaluable", "values": []}
                     )
                     for candidate in candidates
                 },
                 "confidence": {
-                    candidate: previous["confidence"].get(candidate, "low")
+                    candidate: previous["confidence"].get(
+                        candidate, {"state": "not_evaluable", "value": None}
+                    )
                     for candidate in candidates
                 },
-                "evidence_manifest": previous["evidence_manifest"],
+                "global_evidence_refs": list(previous["global_evidence_refs"]),
+                "candidate_evidence_refs": {
+                    candidate: list(previous["candidate_evidence_refs"].get(candidate, []))
+                    for candidate in candidates
+                },
             }
             update_artifact = state["generation_history"][state["active_generation_id"]][
                 "artifacts"
@@ -225,15 +239,24 @@ class StateMachine:
             def changed(item: dict[str, Any]) -> bool:
                 return bool(item["state"] != "unchanged")
 
-            for candidate_change in changes["candidate_changes"]:
+            for candidate_change in sorted(
+                changes["candidate_changes"], key=lambda item: item["candidate_id"]
+            ):
                 candidate = candidate_change["candidate_id"]
                 if candidate not in candidates:
                     continue
                 valuation = candidate_change["valuation"]
                 if changed(valuation):
-                    unavailable = valuation["state"] in ("not_evaluable", "not_applicable")
+                    unavailable = valuation["state"] in (
+                        "removed",
+                        "not_evaluable",
+                        "not_applicable",
+                    )
+                    snapshot_state = (
+                        "not_evaluable" if valuation["state"] == "removed" else valuation["state"]
+                    )
                     projected["valuation_ranges"][candidate] = {
-                        "state": valuation["state"] if unavailable else valuation["data_state"],
+                        "state": snapshot_state if unavailable else valuation["data_state"],
                         "method": None if unavailable else valuation["method"],
                         "current_multiple": None if unavailable else valuation["current_multiple"],
                         "implied_growth": None if unavailable else valuation["implied_growth"],
@@ -245,50 +268,83 @@ class StateMachine:
                 ):
                     item = candidate_change[source]
                     if changed(item):
-                        projected[target][candidate] = (
-                            [] if item["state"] == "removed" else item["values"] or [item["state"]]
-                        )
+                        state_value = item["state"]
+                        projected[target][candidate] = {
+                            "state": state_value
+                            if state_value in ("not_evaluable", "not_applicable")
+                            else "not_evaluable"
+                            if state_value == "removed"
+                            else "observed",
+                            "values": []
+                            if state_value in ("removed", "not_evaluable", "not_applicable")
+                            else item["values"],
+                        }
                 catalyst = candidate_change["catalysts"]
                 if changed(catalyst):
-                    projected["catalysts"][candidate] = (
-                        ["no_identified_catalyst"]
-                        if catalyst["state"] == "no_identified_catalyst"
-                        else catalyst["values"] or [catalyst["state"]]
-                    )
+                    operation = catalyst["state"]
+                    snapshot_state = "not_evaluable" if operation == "removed" else operation
+                    if snapshot_state in ("changed", "added"):
+                        snapshot_state = "identified"
+                    projected["catalysts"][candidate] = {
+                        "state": snapshot_state,
+                        "values": catalyst["values"] if snapshot_state == "identified" else [],
+                    }
                 confidence = candidate_change["confidence"]
                 if changed(confidence):
-                    projected["confidence"][candidate] = confidence["value"] or "low"
+                    operation = confidence["state"]
+                    unavailable = operation in ("removed", "not_evaluable", "not_applicable")
+                    projected["confidence"][candidate] = {
+                        "state": "not_evaluable"
+                        if operation == "removed"
+                        else operation
+                        if unavailable
+                        else "observed",
+                        "value": None if unavailable else confidence["value"],
+                    }
             if changed(changes["shared_theme_risks"]):
                 projected["shared_theme_risks"] = changes["shared_theme_risks"]["values"]
             if changed(changes["key_assumptions"]):
                 projected["key_assumptions"] = changes["key_assumptions"]["values"]
-            for candidate_change in changes["candidate_changes"]:
+            for candidate_change in sorted(
+                changes["candidate_changes"], key=lambda item: item["candidate_id"]
+            ):
+                candidate = candidate_change["candidate_id"]
                 assumptions = candidate_change["assumptions"]
                 if assumptions["state"] == "changed":
-                    projected["key_assumptions"] = assumptions["values"]
+                    projected["candidate_assumptions"][candidate] = assumptions["values"]
                 elif assumptions["state"] == "added":
-                    projected["key_assumptions"] = list(
-                        dict.fromkeys([*projected["key_assumptions"], *assumptions["values"]])
+                    projected["candidate_assumptions"][candidate] = sorted(
+                        set(projected["candidate_assumptions"][candidate])
+                        | set(assumptions["values"])
                     )
                 elif assumptions["state"] == "removed":
-                    projected["key_assumptions"] = [
+                    projected["candidate_assumptions"][candidate] = [
                         value
-                        for value in projected["key_assumptions"]
+                        for value in projected["candidate_assumptions"][candidate]
                         if value not in assumptions["values"]
                     ]
                 evidence = candidate_change["evidence_refs"]
                 if evidence["state"] == "changed":
-                    projected["evidence_manifest"] = evidence["values"]
+                    projected["candidate_evidence_refs"][candidate] = evidence["values"]
                 elif evidence["state"] == "added":
-                    projected["evidence_manifest"] = list(
-                        dict.fromkeys([*projected["evidence_manifest"], *evidence["values"]])
+                    projected["candidate_evidence_refs"][candidate] = sorted(
+                        set(projected["candidate_evidence_refs"][candidate])
+                        | set(evidence["values"])
                     )
                 elif evidence["state"] == "removed":
-                    projected["evidence_manifest"] = [
+                    projected["candidate_evidence_refs"][candidate] = [
                         value
-                        for value in projected["evidence_manifest"]
+                        for value in projected["candidate_evidence_refs"][candidate]
                         if value not in evidence["values"]
                     ]
+            projected["evidence_manifest"] = sorted(
+                set(projected["global_evidence_refs"])
+                | {
+                    evidence
+                    for candidate in sorted(projected["candidate_evidence_refs"])
+                    for evidence in projected["candidate_evidence_refs"][candidate]
+                }
+            )
             return projected
         artifacts = state["generation_history"][state["initial_generation_id"]]["artifacts"]
         valuations = {
@@ -326,20 +382,33 @@ class StateMachine:
         )
         return {
             "key_assumptions": assumptions,
+            "candidate_assumptions": {
+                candidate: sorted(set(assumptions)) for candidate in candidates
+            },
             "shared_theme_risks": risks["shared_theme_risks"],
             "company_specific_risks": {
-                candidate: [
-                    risk_rows[candidate][key]
-                    for key in ("maximum_failure_path", "financing_failure_path", "dilution_path")
-                ]
+                candidate: {
+                    "state": "observed",
+                    "values": list(
+                        dict.fromkeys(
+                            risk_rows[candidate][key]
+                            for key in (
+                                "maximum_failure_path",
+                                "financing_failure_path",
+                                "dilution_path",
+                            )
+                        )
+                    ),
+                }
                 for candidate in candidates
             },
             "catalysts": {
-                candidate: (
-                    [catalyst_rows[candidate]["event"]]
+                candidate: {
+                    "state": catalyst_rows[candidate]["status"],
+                    "values": [catalyst_rows[candidate]["event"]]
                     if catalyst_rows[candidate]["status"] == "identified"
-                    else ["no_identified_catalyst"]
-                )
+                    else [],
+                }
                 for candidate in candidates
             },
             "valuation_ranges": {
@@ -353,11 +422,21 @@ class StateMachine:
                 for candidate in candidates
             },
             "thesis_invalidation_conditions": {
-                candidate: [risk_rows[candidate]["thesis_invalidation_condition"]]
+                candidate: {
+                    "state": "observed",
+                    "values": [risk_rows[candidate]["thesis_invalidation_condition"]],
+                }
                 for candidate in candidates
             },
-            "confidence": {candidate: confidence_value for candidate in candidates},
-            "evidence_manifest": evidence_ids,
+            "confidence": {
+                candidate: {"state": "observed", "value": confidence_value}
+                for candidate in candidates
+            },
+            "global_evidence_refs": [],
+            "candidate_evidence_refs": {
+                candidate: sorted(evidence_ids) for candidate in candidates
+            },
+            "evidence_manifest": sorted(evidence_ids),
         }
 
     def _activate_initial_handoff(self, state: dict[str, Any], selection: dict[str, Any]) -> None:
@@ -417,9 +496,48 @@ class StateMachine:
                 "valuation_ranges",
                 "thesis_invalidation_conditions",
                 "confidence",
+                "candidate_assumptions",
+                "candidate_evidence_refs",
             ):
                 if set(handoff[key]) != candidates:
                     raise SemanticError(f"handoff {key} candidate coverage mismatch")
+            for candidate in candidates:
+                confidence = handoff["confidence"][candidate]
+                if (confidence["state"] in ("observed", "estimated")) != (
+                    confidence["value"] is not None
+                ):
+                    raise SemanticError("handoff confidence state/value mismatch")
+                catalyst = handoff["catalysts"][candidate]
+                if (catalyst["state"] == "identified") != bool(catalyst["values"]):
+                    raise SemanticError("handoff catalyst state/value mismatch")
+                for field in (
+                    "company_specific_risks",
+                    "thesis_invalidation_conditions",
+                ):
+                    snapshot = handoff[field][candidate]
+                    if snapshot["state"] != "observed" and snapshot["values"]:
+                        raise SemanticError(f"handoff {field} unavailable state has values")
+                valuation = handoff["valuation_ranges"][candidate]
+                if valuation["state"] in ("not_evaluable", "not_applicable") and any(
+                    valuation[field] is not None
+                    for field in ("method", "current_multiple", "implied_growth", "implied_margin")
+                ):
+                    raise SemanticError("handoff valuation unavailable state has values")
+                if valuation["state"] in ("observed", "estimated") and all(
+                    valuation[field] is None
+                    for field in ("method", "current_multiple", "implied_growth", "implied_margin")
+                ):
+                    raise SemanticError("handoff valuation available state has no value")
+            expected_manifest = sorted(
+                set(handoff["global_evidence_refs"])
+                | {
+                    evidence
+                    for candidate in sorted(handoff["candidate_evidence_refs"])
+                    for evidence in handoff["candidate_evidence_refs"][candidate]
+                }
+            )
+            if handoff["evidence_manifest"] != expected_manifest:
+                raise SemanticError("handoff evidence manifest union mismatch")
             if any(
                 candidate != result["candidate_id"]
                 for candidate, result in handoff["company_scenario_results"].items()

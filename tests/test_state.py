@@ -1,6 +1,6 @@
 import json
 import pytest
-from theme_compare.models import SemanticError
+from theme_compare.models import SemanticError, canonical_bytes
 from theme_compare.state import StateMachine
 
 from phase_fixtures import SET_ID, TS, artifact
@@ -58,11 +58,13 @@ def test_initial_handoff_projects_validated_phase_artifacts(tmp_path):
     handoff = sm.load()["handoff_history"]["h1"]
     assert handoff["valuation_ranges"]["A"]["current_multiple"] == 10
     assert handoff["valuation_ranges"]["A"]["state"] == "observed"
-    assert handoff["catalysts"]["A"] == ["earnings"]
-    assert "loss" in handoff["company_specific_risks"]["A"]
-    assert handoff["thesis_invalidation_conditions"]["A"] == ["demand"]
+    assert handoff["catalysts"]["A"] == {"state": "identified", "values": ["earnings"]}
+    assert "loss" in handoff["company_specific_risks"]["A"]["values"]
+    assert handoff["thesis_invalidation_conditions"]["A"]["values"] == ["demand"]
     assert handoff["evidence_manifest"] == ["E1", "E2"]
-    assert handoff["confidence"]["A"] == "medium"
+    assert handoff["confidence"]["A"] == {"state": "observed", "value": "medium"}
+    assert handoff["candidate_assumptions"]["A"] == ["demand persists"]
+    assert handoff["candidate_evidence_refs"]["A"] == ["E1", "E2"]
     assert handoff["key_assumptions"] == ["demand persists"]
 
 
@@ -102,7 +104,132 @@ def test_update_projection_adds_explicit_state_and_removes_absent_candidate(tmp_
     assert set(projected["valuation_ranges"]) == {"B"}
     assert projected["valuation_ranges"]["B"]["state"] == "not_evaluable"
     assert projected["valuation_ranges"]["B"]["current_multiple"] is None
-    assert projected["catalysts"]["B"] == ["no_identified_catalyst"]
+    assert projected["catalysts"]["B"] == {
+        "state": "no_identified_catalyst",
+        "values": [],
+    }
+    assert set(projected["candidate_assumptions"]) == {"B"}
+    assert set(projected["candidate_evidence_refs"]) == {"B"}
+
+
+@pytest.mark.parametrize("confidence_operation", ["removed", "not_evaluable"])
+def test_update_operations_become_typed_snapshot_states(tmp_path, confidence_operation):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    sm.command(
+        "更新",
+        {
+            "new_generation_id": "g2",
+            "new_candidate_set_id": SET_ID,
+            "new_comparison_as_of": "2025-02-01T00:00:00Z",
+            "new_source_cutoff_at": "2025-01-31T00:00:00Z",
+            "previous_generation_id": "g1",
+        },
+    )
+    update = artifact(1, "g2", "update", "2025-01-31T00:00:00Z")
+    change = update["payload"]["update_diff"]["handoff_context_changes"]["candidate_changes"][0]
+    change["valuation"].update(
+        state="removed",
+        method=None,
+        current_multiple=None,
+        implied_growth=None,
+        implied_margin=None,
+    )
+    change["catalysts"] = {"state": "removed", "values": []}
+    change["company_specific_risks"] = {"state": "removed", "values": []}
+    change["thesis_invalidation_conditions"] = {"state": "removed", "values": []}
+    change["confidence"] = {"state": confidence_operation, "value": None}
+    sm.command("次", update)
+    sm.command("次", artifact(2, "g2", "update", "2025-01-31T00:00:00Z"))
+    handoff = sm.load()["handoff_history"]["h2"]
+    assert handoff["confidence"]["A"] == {"state": "not_evaluable", "value": None}
+    assert handoff["catalysts"]["A"] == {"state": "not_evaluable", "values": []}
+    assert handoff["company_specific_risks"]["A"] == {
+        "state": "not_evaluable",
+        "values": [],
+    }
+    assert handoff["thesis_invalidation_conditions"]["A"] == {
+        "state": "not_evaluable",
+        "values": [],
+    }
+    assert handoff["valuation_ranges"]["A"]["state"] == "not_evaluable"
+    assert all(
+        handoff["valuation_ranges"]["A"][field] is None
+        for field in ("method", "current_multiple", "implied_growth", "implied_margin")
+    )
+    sm.command(
+        "更新",
+        {
+            "new_generation_id": "g3",
+            "new_candidate_set_id": SET_ID,
+            "new_comparison_as_of": "2025-03-01T00:00:00Z",
+            "new_source_cutoff_at": "2025-02-28T00:00:00Z",
+            "previous_generation_id": "g2",
+        },
+    )
+    recovery = artifact(1, "g3", "update", "2025-02-28T00:00:00Z")
+    recovered = recovery["payload"]["update_diff"]["handoff_context_changes"]["candidate_changes"][
+        0
+    ]
+    recovered["valuation"]["state"] = "changed"
+    recovered["confidence"] = {"state": "changed", "value": "high"}
+    recovered["catalysts"] = {"state": "unchanged", "values": []}
+    recovered["company_specific_risks"] = {"state": "unchanged", "values": []}
+    recovered["thesis_invalidation_conditions"] = {"state": "unchanged", "values": []}
+    sm.command("次", recovery)
+    sm.command("次", artifact(2, "g3", "update", "2025-02-28T00:00:00Z"))
+    recovered_handoff = sm.load()["handoff_history"]["h3"]
+    assert recovered_handoff["valuation_ranges"]["A"]["state"] == "observed"
+    assert recovered_handoff["confidence"]["A"] == {"state": "observed", "value": "high"}
+
+
+def test_multi_candidate_context_overlay_is_order_independent(tmp_path):
+    sm = machine(tmp_path)
+    for phase in range(1, 11):
+        sm.command("次", artifact(phase))
+    state = sm.load()
+    previous = state["handoff_history"]["h1"]
+    for field in (
+        "company_scenario_results",
+        "company_specific_risks",
+        "catalysts",
+        "valuation_ranges",
+        "thesis_invalidation_conditions",
+        "confidence",
+        "candidate_assumptions",
+        "candidate_evidence_refs",
+    ):
+        previous[field]["B"] = json.loads(json.dumps(previous[field]["A"]))
+    update = artifact(1, "g2", "update", "2025-01-31T00:00:00Z")
+    changes = update["payload"]["update_diff"]["handoff_context_changes"]
+    a = changes["candidate_changes"][0]
+    a["assumptions"] = {"state": "changed", "values": ["A assumption"]}
+    a["evidence_refs"] = {"state": "changed", "values": ["E1"]}
+    b = json.loads(json.dumps(a))
+    b["candidate_id"] = "B"
+    b["assumptions"] = {"state": "changed", "values": ["B assumption"]}
+    b["evidence_refs"] = {"state": "changed", "values": ["E2"]}
+    changes["candidate_changes"] = [a, b]
+    state.update(mode="update", active_generation_id="g2", generation_id="g2")
+    state["generation_history"]["g2"] = {
+        "candidate_set_id": SET_ID,
+        "comparison_as_of": "2025-02-01T00:00:00Z",
+        "source_cutoff_at": "2025-01-31T00:00:00Z",
+        "detailed_candidates": ["A", "B"],
+        "artifacts": [update],
+    }
+    first = sm._project_handoff_context(state, ["A", "B"])
+    changes["candidate_changes"].reverse()
+    second = sm._project_handoff_context(state, ["A", "B"])
+    assert canonical_bytes(first) == canonical_bytes(second)
+    assert first["candidate_assumptions"] == {
+        "A": ["A assumption"],
+        "B": ["B assumption"],
+    }
+    assert first["candidate_evidence_refs"] == {"A": ["E1"], "B": ["E2"]}
+    assert first["evidence_manifest"] == ["E1", "E2"]
+    assert first["key_assumptions"] == ["launch on time"]
 
 
 @pytest.mark.parametrize("operation,phase", [("次", 2), ("bad", 1), ("更新", 1)])
@@ -139,12 +266,20 @@ def test_update_two_phases_preserves_generation(tmp_path):
     assert completed["handoff_history"]["h2"]["status"] == "active"
     assert completed["superseded_handoff_ids"] == ["h1"]
     assert completed["handoff_history"]["h2"]["valuation_ranges"]["A"]["current_multiple"] == 12
-    assert completed["handoff_history"]["h2"]["catalysts"]["A"] == ["product launch"]
-    assert completed["handoff_history"]["h2"]["company_specific_risks"]["A"] == ["execution"]
-    assert completed["handoff_history"]["h2"]["thesis_invalidation_conditions"]["A"] == [
+    assert completed["handoff_history"]["h2"]["catalysts"]["A"] == {
+        "state": "identified",
+        "values": ["product launch"],
+    }
+    assert completed["handoff_history"]["h2"]["company_specific_risks"]["A"]["values"] == [
+        "execution"
+    ]
+    assert completed["handoff_history"]["h2"]["thesis_invalidation_conditions"]["A"]["values"] == [
         "launch failure"
     ]
-    assert completed["handoff_history"]["h2"]["confidence"]["A"] == "high"
+    assert completed["handoff_history"]["h2"]["confidence"]["A"] == {
+        "state": "observed",
+        "value": "high",
+    }
     assert completed["handoff_history"]["h2"]["evidence_manifest"] == ["E1"]
 
 
@@ -182,8 +317,8 @@ def test_two_consecutive_update_generations_complete_and_chain_handoffs(tmp_path
     assert state["superseded_handoff_ids"] == ["h1", "h2"]
     assert state["handoff_history"]["h2"]["superseded_by"] == "h3"
     assert state["handoff_history"]["h3"]["valuation_ranges"]["A"]["current_multiple"] == 12
-    assert state["handoff_history"]["h3"]["catalysts"]["A"] == ["product launch"]
-    assert state["handoff_history"]["h3"]["company_specific_risks"]["A"] == ["execution"]
+    assert state["handoff_history"]["h3"]["catalysts"]["A"]["values"] == ["product launch"]
+    assert state["handoff_history"]["h3"]["company_specific_risks"]["A"]["values"] == ["execution"]
 
 
 @pytest.mark.parametrize(

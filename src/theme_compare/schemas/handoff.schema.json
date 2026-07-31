@@ -410,6 +410,17 @@
         "minLength": 1
       }
     },
+    "candidate_assumptions": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
+      }
+    },
     "shared_theme_risks": {
       "type": "array",
       "items": {
@@ -420,21 +431,104 @@
     "company_specific_risks": {
       "type": "object",
       "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "string",
-          "minLength": 1
-        }
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "observed",
+              "not_evaluable",
+              "not_applicable"
+            ]
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "state",
+          "values"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "not_evaluable",
+                    "not_applicable"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "values": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "catalysts": {
       "type": "object",
       "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "string",
-          "minLength": 1
-        }
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "identified",
+              "no_identified_catalyst",
+              "not_evaluable",
+              "not_applicable"
+            ]
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "state",
+          "values"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "identified"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "values": {
+                  "minItems": 1
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "values": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "valuation_ranges": {
@@ -492,21 +586,134 @@
     "thesis_invalidation_conditions": {
       "type": "object",
       "additionalProperties": {
-        "type": "array",
-        "items": {
-          "type": "string",
-          "minLength": 1
-        }
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "observed",
+              "not_evaluable",
+              "not_applicable"
+            ]
+          },
+          "values": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "state",
+          "values"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "not_evaluable",
+                    "not_applicable"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "values": {
+                  "maxItems": 0
+                }
+              }
+            }
+          }
+        ]
       }
     },
     "confidence": {
       "type": "object",
       "additionalProperties": {
-        "enum": [
-          "low",
-          "medium",
-          "high"
+        "type": "object",
+        "additionalProperties": false,
+        "properties": {
+          "state": {
+            "enum": [
+              "observed",
+              "estimated",
+              "not_evaluable",
+              "not_applicable"
+            ]
+          },
+          "value": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              null
+            ]
+          }
+        },
+        "required": [
+          "state",
+          "value"
+        ],
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "observed",
+                    "estimated"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "value": {
+                  "enum": [
+                    "low",
+                    "medium",
+                    "high"
+                  ]
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "value": {
+                  "type": "null"
+                }
+              }
+            }
+          }
         ]
+      }
+    },
+    "global_evidence_refs": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "uniqueItems": true
+    },
+    "candidate_evidence_refs": {
+      "type": "object",
+      "additionalProperties": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "minLength": 1
+        },
+        "uniqueItems": true
       }
     },
     "evidence_manifest": {
@@ -547,12 +754,15 @@
     "common_scenarios",
     "company_scenario_results",
     "key_assumptions",
+    "candidate_assumptions",
     "shared_theme_risks",
     "company_specific_risks",
     "catalysts",
     "valuation_ranges",
     "thesis_invalidation_conditions",
     "confidence",
+    "global_evidence_refs",
+    "candidate_evidence_refs",
     "evidence_manifest",
     "recommended_next_action"
   ],

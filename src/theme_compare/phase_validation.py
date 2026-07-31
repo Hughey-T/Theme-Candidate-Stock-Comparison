@@ -419,9 +419,19 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
                     previous_handoff["thesis_invalidation_conditions"],
                 ),
             ):
-                validate_list_change(change[field], previous_map.get(candidate), field)
+                previous_snapshot = previous_map.get(candidate)
+                validate_list_change(
+                    change[field],
+                    previous_snapshot["values"] if previous_snapshot is not None else None,
+                    field,
+                )
             confidence = change["confidence"]
-            previous_confidence = previous_handoff["confidence"].get(candidate)
+            previous_confidence_snapshot = previous_handoff["confidence"].get(candidate)
+            previous_confidence = (
+                previous_confidence_snapshot["value"]
+                if previous_confidence_snapshot is not None
+                else None
+            )
             if confidence["state"] == "unchanged" and confidence["value"] != previous_confidence:
                 raise SemanticError("confidence unchanged value mismatch")
             if confidence["state"] == "changed" and confidence["value"] == previous_confidence:
@@ -438,10 +448,14 @@ def validate_phase_artifact(state: dict[str, Any], artifact: dict[str, Any]) -> 
             ):
                 raise SemanticError("unavailable confidence contains value")
             validate_set_delta(
-                change["evidence_refs"], previous_handoff["evidence_manifest"], "evidence_refs"
+                change["evidence_refs"],
+                previous_handoff["candidate_evidence_refs"].get(candidate, []),
+                "evidence_refs",
             )
             validate_set_delta(
-                change["assumptions"], previous_handoff["key_assumptions"], "assumptions"
+                change["assumptions"],
+                previous_handoff["candidate_assumptions"].get(candidate, []),
+                "assumptions",
             )
         validate_list_change(
             value["handoff_context_changes"]["shared_theme_risks"],

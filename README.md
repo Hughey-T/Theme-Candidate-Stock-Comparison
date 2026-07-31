@@ -26,6 +26,8 @@ runtimeが保証しないものは、sourceの真実性、市場データの完�
 
 Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Runtimeは`importlib.resources`で読み、source checkout、editable install、wheel installの経路差を作りません。Windowsを含めsymlinkを必要とせず、generatorとtestsもpackage resource pathを直接使用します。
 
+Handoff v2はupdate operationとsnapshot data stateを分離し、confidence、catalyst、risk、invalidationをclosed typed objectで保存します。Candidate別assumption/evidenceは個別mapとして保存し、candidate changeの入力順に依存しない決定的なhandoffを生成します。
+
 ## Development
 
 Tool versions are pinned in `constraints-dev.txt`; dependency ranges in `pyproject.toml` prevent accidental major-version drift. Update pins only with a green Python 3.11–3.13 matrix.

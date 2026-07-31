@@ -592,6 +592,51 @@ def main():
             )
         )
     artifact = {"$schema": "https://json-schema.org/draft/2020-12/schema", "oneOf": variants}
+    confidence_snapshot = closed(
+        {
+            "state": {"enum": ["observed", "estimated", "not_evaluable", "not_applicable"]},
+            "value": {"type": ["string", "null"], "enum": ["low", "medium", "high", None]},
+        }
+    )
+    confidence_snapshot["allOf"] = [
+        {
+            "if": {"properties": {"state": {"enum": ["observed", "estimated"]}}},
+            "then": {"properties": {"value": {"enum": ["low", "medium", "high"]}}},
+            "else": {"properties": {"value": {"type": "null"}}},
+        }
+    ]
+    catalyst_snapshot = closed(
+        {
+            "state": {
+                "enum": [
+                    "identified",
+                    "no_identified_catalyst",
+                    "not_evaluable",
+                    "not_applicable",
+                ]
+            },
+            "values": {"type": "array", "items": STRING, "uniqueItems": True},
+        }
+    )
+    catalyst_snapshot["allOf"] = [
+        {
+            "if": {"properties": {"state": {"const": "identified"}}},
+            "then": {"properties": {"values": {"minItems": 1}}},
+            "else": {"properties": {"values": {"maxItems": 0}}},
+        }
+    ]
+    analysis_list_snapshot = closed(
+        {
+            "state": {"enum": ["observed", "not_evaluable", "not_applicable"]},
+            "values": {"type": "array", "items": STRING, "uniqueItems": True},
+        }
+    )
+    analysis_list_snapshot["allOf"] = [
+        {
+            "if": {"properties": {"state": {"enum": ["not_evaluable", "not_applicable"]}}},
+            "then": {"properties": {"values": {"maxItems": 0}}},
+        }
+    ]
     handoff = closed(
         {
             "schema_version": STRING,
@@ -632,14 +677,18 @@ def main():
             "common_scenarios": closed({name: score for name in SCENARIOS}),
             "company_scenario_results": {"type": "object", "additionalProperties": scenario_result},
             "key_assumptions": {"type": "array", "items": STRING},
+            "candidate_assumptions": {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": STRING, "uniqueItems": True},
+            },
             "shared_theme_risks": {"type": "array", "items": STRING},
             "company_specific_risks": {
                 "type": "object",
-                "additionalProperties": {"type": "array", "items": STRING},
+                "additionalProperties": analysis_list_snapshot,
             },
             "catalysts": {
                 "type": "object",
-                "additionalProperties": {"type": "array", "items": STRING},
+                "additionalProperties": catalyst_snapshot,
             },
             "valuation_ranges": {
                 "type": "object",
@@ -655,11 +704,16 @@ def main():
             },
             "thesis_invalidation_conditions": {
                 "type": "object",
-                "additionalProperties": {"type": "array", "items": STRING},
+                "additionalProperties": analysis_list_snapshot,
             },
             "confidence": {
                 "type": "object",
-                "additionalProperties": {"enum": ["low", "medium", "high"]},
+                "additionalProperties": confidence_snapshot,
+            },
+            "global_evidence_refs": {"type": "array", "items": STRING, "uniqueItems": True},
+            "candidate_evidence_refs": {
+                "type": "object",
+                "additionalProperties": {"type": "array", "items": STRING, "uniqueItems": True},
             },
             "evidence_manifest": {"type": "array", "items": STRING},
             "recommended_next_action": STRING,
