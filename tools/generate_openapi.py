@@ -25,9 +25,7 @@ def move_path_parameters_to_operations(document: dict[str, Any]) -> None:
     for path, path_item in document["paths"].items():
         inherited = path_item.pop("parameters", [])
         operations = [
-            operation
-            for method, operation in path_item.items()
-            if method in HTTP_METHODS
+            operation for method, operation in path_item.items() if method in HTTP_METHODS
         ]
         for operation in operations:
             existing = operation.get("parameters", [])
@@ -46,9 +44,7 @@ def move_path_parameters_to_operations(document: dict[str, Any]) -> None:
                     if parameter_key(parameter) == ("session_id", "path")
                 ]
                 if len(session_parameters) != 1:
-                    raise ValueError(
-                        f"{path} must define exactly one session_id path parameter"
-                    )
+                    raise ValueError(f"{path} must define exactly one session_id path parameter")
                 session_parameter = session_parameters[0]
                 merged = [
                     parameter
@@ -68,9 +64,7 @@ def main() -> None:
     components["CreateSessionRequest"] = load_json(
         SCHEMA_ROOT / "upstream-theme-handoff.schema.json"
     )
-    components["PhaseArtifact"] = load_json(
-        SCHEMA_ROOT / "phase-artifact.schema.json"
-    )
+    components["PhaseArtifact"] = load_json(SCHEMA_ROOT / "phase-artifact.schema.json")
     move_path_parameters_to_operations(document)
     OPENAPI_PATH.write_text(
         json.dumps(document, indent=2, ensure_ascii=False) + "\n",

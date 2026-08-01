@@ -102,9 +102,7 @@ def test_create_request_is_packaged_upstream_contract():
 
 def test_phase_artifact_is_packaged_object_contract():
     packaged = json.loads(
-        Path("src/theme_compare/schemas/phase-artifact.schema.json").read_text(
-            encoding="utf-8"
-        )
+        Path("src/theme_compare/schemas/phase-artifact.schema.json").read_text(encoding="utf-8")
     )
     schema = DOC["components"]["schemas"]["PhaseArtifact"]
     assert schema == packaged
@@ -123,8 +121,7 @@ def test_session_id_is_required_at_operation_level():
         matches = [
             parameter
             for parameter in parameters
-            if (parameter.get("name"), parameter.get("in"))
-            == ("session_id", "path")
+            if (parameter.get("name"), parameter.get("in")) == ("session_id", "path")
         ]
         assert len(matches) == 1
         assert matches[0]["required"] is True
@@ -132,9 +129,7 @@ def test_session_id_is_required_at_operation_level():
 
 
 def test_handoff_keeps_session_id_and_include_history():
-    parameters = DOC["paths"]["/v1/sessions/{session_id}/handoff"]["get"][
-        "parameters"
-    ]
+    parameters = DOC["paths"]["/v1/sessions/{session_id}/handoff"]["get"]["parameters"]
     assert [(parameter["name"], parameter["in"]) for parameter in parameters] == [
         ("session_id", "path"),
         ("include_history", "query"),
@@ -142,9 +137,9 @@ def test_handoff_keeps_session_id_and_include_history():
 
 
 def test_submit_phase_request_resolves_to_object_schema():
-    schema = DOC["paths"]["/v1/sessions/{session_id}/phases"]["post"][
-        "requestBody"
-    ]["content"]["application/json"]["schema"]
+    schema = DOC["paths"]["/v1/sessions/{session_id}/phases"]["post"]["requestBody"]["content"][
+        "application/json"
+    ]["schema"]
     resolved = resolve(schema)
     assert resolved["type"] == "object"
     assert len(resolved["oneOf"]) == 12
