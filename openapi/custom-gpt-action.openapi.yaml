@@ -157,19 +157,19 @@
               }
             }
           }
-        }
-      },
-      "parameters": [
-        {
-          "name": "session_id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string",
-            "pattern": "^s_[0-9a-f]{32}$"
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^s_[0-9a-f]{32}$"
+            }
           }
-        }
-      ]
+        ]
+      }
     },
     "/v1/sessions/{session_id}/next-contract": {
       "get": {
@@ -209,19 +209,19 @@
               }
             }
           }
-        }
-      },
-      "parameters": [
-        {
-          "name": "session_id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string",
-            "pattern": "^s_[0-9a-f]{32}$"
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^s_[0-9a-f]{32}$"
+            }
           }
-        }
-      ]
+        ]
+      }
     },
     "/v1/sessions/{session_id}/phases": {
       "post": {
@@ -271,19 +271,19 @@
               }
             }
           }
-        }
-      },
-      "parameters": [
-        {
-          "name": "session_id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string",
-            "pattern": "^s_[0-9a-f]{32}$"
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^s_[0-9a-f]{32}$"
+            }
           }
-        }
-      ]
+        ]
+      }
     },
     "/v1/sessions/{session_id}/updates": {
       "post": {
@@ -332,24 +332,33 @@
               }
             }
           }
-        }
-      },
-      "parameters": [
-        {
-          "name": "session_id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string",
-            "pattern": "^s_[0-9a-f]{32}$"
+        },
+        "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^s_[0-9a-f]{32}$"
+            }
           }
-        }
-      ]
+        ]
+      }
     },
     "/v1/sessions/{session_id}/handoff": {
       "get": {
         "operationId": "getActiveComparisonHandoff",
         "parameters": [
+          {
+            "name": "session_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^s_[0-9a-f]{32}$"
+            }
+          },
           {
             "name": "include_history",
             "in": "query",
@@ -394,18 +403,7 @@
             }
           }
         }
-      },
-      "parameters": [
-        {
-          "name": "session_id",
-          "in": "path",
-          "required": true,
-          "schema": {
-            "type": "string",
-            "pattern": "^s_[0-9a-f]{32}$"
-          }
-        }
-      ]
+      }
     }
   },
   "components": {
@@ -552,6 +550,7 @@
       },
       "PhaseArtifact": {
         "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
         "oneOf": [
           {
             "type": "object",
@@ -6458,8 +6457,8 @@
           },
           "next_allowed_operation": {
             "enum": [
-              "\u6b21",
-              "\u66f4\u65b0"
+              "次",
+              "更新"
             ]
           }
         },
@@ -6604,8 +6603,8 @@
           },
           "next_allowed_operation": {
             "enum": [
-              "\u6b21",
-              "\u66f4\u65b0"
+              "次",
+              "更新"
             ]
           },
           "display_summary": {

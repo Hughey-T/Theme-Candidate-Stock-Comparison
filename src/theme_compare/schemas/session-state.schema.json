@@ -62,6 +62,7 @@
             "type": "array",
             "items": {
               "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
               "oneOf": [
                 {
                   "type": "object",
