@@ -598,7 +598,11 @@ def main():
                 }
             )
         )
-    artifact = {"$schema": "https://json-schema.org/draft/2020-12/schema", "oneOf": variants}
+    artifact = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": variants,
+    }
     confidence_snapshot = closed(
         {
             "state": {"enum": ["observed", "estimated", "not_evaluable", "not_applicable"]},
