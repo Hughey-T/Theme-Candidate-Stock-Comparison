@@ -1,0 +1,156 @@
+name: Fix GPT PhaseArtifact importer schema
+
+on:
+  push:
+    branches:
+      - fix/custom-gpt-phase-artifact-properties
+    paths:
+      - .github/workflows/fix-gpt-phase-artifact.yml
+
+permissions:
+  contents: write
+
+jobs:
+  apply-fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/custom-gpt-phase-artifact-properties
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install development dependencies
+        run: PIP_CONSTRAINT=constraints-dev.txt python -m pip install -e '.[dev]'
+
+      - name: Add explicit PhaseArtifact properties
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          schema_generator = Path("tools/generate_schemas.py")
+          text = schema_generator.read_text(encoding="utf-8")
+
+          import_old = "from __future__ import annotations\nimport json\n"
+          import_new = "from __future__ import annotations\n\nimport json\nfrom copy import deepcopy\n"
+          if import_old not in text:
+              raise SystemExit("expected import block not found")
+          text = text.replace(import_old, import_new, 1)
+
+          artifact_old = '''    artifact = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "type": "object",
+        "oneOf": variants,
+    }
+'''
+          artifact_new = '''    artifact_properties = deepcopy(variants[0]["properties"])
+          artifact_properties["mode"] = {"enum": ["initial", "update"]}
+          artifact_properties["phase"] = {"type": "integer", "minimum": 1, "maximum": 10}
+          payload_properties = {}
+          for variant in variants:
+              for name, schema in variant["properties"]["payload"]["properties"].items():
+                  if name in payload_properties and payload_properties[name] != schema:
+                      raise ValueError(f"conflicting payload property schema: {name}")
+                  payload_properties[name] = deepcopy(schema)
+          artifact_properties["payload"] = {
+              "type": "object",
+              "additionalProperties": False,
+              "properties": payload_properties,
+              "required": ["summary"],
+              "minProperties": 2,
+          }
+          artifact = {
+              "$schema": "https://json-schema.org/draft/2020-12/schema",
+              "type": "object",
+              "additionalProperties": False,
+              "properties": artifact_properties,
+              "required": list(artifact_properties),
+              "oneOf": variants,
+          }
+'''
+          if artifact_old not in text:
+              raise SystemExit("expected artifact block not found")
+          text = text.replace(artifact_old, artifact_new, 1)
+          schema_generator.write_text(text, encoding="utf-8")
+
+          test_file = Path("tests/test_openapi.py")
+          tests = test_file.read_text(encoding="utf-8")
+          assertion_old = '''    assert schema == packaged
+    assert schema["type"] == "object"
+    assert len(schema["oneOf"]) == 12
+'''
+          assertion_new = '''    assert schema == packaged
+    assert schema["type"] == "object"
+    assert schema["additionalProperties"] is False
+    assert set(schema["required"]) == set(schema["properties"])
+    assert set(schema["properties"]) == {
+        "mode",
+        "phase",
+        "generation_id",
+        "candidate_set_id",
+        "source_cutoff_at",
+        "facts",
+        "company_claims",
+        "external_estimates",
+        "judgments",
+        "payload",
+    }
+    payload = schema["properties"]["payload"]
+    assert payload["type"] == "object"
+    assert payload["additionalProperties"] is False
+    assert payload["required"] == ["summary"]
+    assert payload["minProperties"] == 2
+    assert len(payload["properties"]) == 13
+    assert len(schema["oneOf"]) == 12
+'''
+          if assertion_old not in tests:
+              raise SystemExit("expected test assertion block not found")
+          tests = tests.replace(assertion_old, assertion_new, 1)
+          test_file.write_text(tests, encoding="utf-8")
+          PY
+
+      - name: Regenerate schemas and OpenAPI
+        run: |
+          python tools/generate_schemas.py
+          python tools/generate_openapi.py
+
+      - name: Format and test
+        run: |
+          ruff format tools/generate_schemas.py tests/test_openapi.py
+          ruff check .
+          ruff format --check .
+          pytest -q
+
+      - name: Verify importer projection
+        run: |
+          python - <<'PY'
+          import json
+          from pathlib import Path
+
+          document = json.loads(Path("openapi/custom-gpt-action.openapi.yaml").read_text())
+          schema = document["components"]["schemas"]["PhaseArtifact"]
+          assert schema["type"] == "object"
+          assert schema["properties"]
+          assert schema["required"]
+          assert schema["properties"]["payload"]["properties"]
+          assert len(schema["oneOf"]) == 12
+          request_schema = document["paths"]["/v1/sessions/{session_id}/phases"]["post"]["requestBody"]["content"]["application/json"]["schema"]
+          assert request_schema == {"$ref": "#/components/schemas/PhaseArtifact"}
+          PY
+
+      - name: Commit generated fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add tools/generate_schemas.py tests/test_openapi.py openapi/custom-gpt-action.openapi.yaml src/theme_compare/schemas/phase-artifact.schema.json src/theme_compare/schemas/session-state.schema.json
+          git commit -m "Expose PhaseArtifact properties to GPT Actions importer"
+
+      - name: Remove temporary workflow
+        run: |
+          rm .github/workflows/fix-gpt-phase-artifact.yml
+          git add .github/workflows/fix-gpt-phase-artifact.yml
+          git commit -m "Remove temporary PhaseArtifact fix workflow"
+          git push origin HEAD:fix/custom-gpt-phase-artifact-properties
