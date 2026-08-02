@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 from collections import defaultdict
 from typing import Any
 
@@ -10,6 +11,7 @@ from .models import SemanticError, finite
 RANKING_TYPES = ("company_quality", "tactical", "structural", "risk_adjusted", "portfolio_fit")
 ELIGIBLE_STATES = {"observed", "estimated"}
 ELIGIBLE_COMPARABILITY = {"comparable", "partially_comparable"}
+_DIAGNOSTIC_LIMIT = 50
 
 
 def derive_rankings(
@@ -68,6 +70,91 @@ def derive_rankings(
     return rankings, scores
 
 
+def _ranking_mismatch_diagnostic(
+    expected_rankings: dict[str, list[str]],
+    expected_scores: dict[str, dict[str, float]],
+    actual_rankings: dict[str, list[str]],
+    actual_scores: dict[str, dict[str, float]],
+) -> dict[str, Any]:
+    expected_types = set(RANKING_TYPES)
+    actual_ranking_types = set(actual_rankings)
+    actual_score_types = set(actual_scores)
+    missing_ranking_types = sorted(
+        (expected_types - actual_ranking_types) | (expected_types - actual_score_types)
+    )
+    extra_ranking_types = sorted(
+        (actual_ranking_types - expected_types) | (actual_score_types - expected_types)
+    )
+
+    ranking_mismatches: list[dict[str, Any]] = []
+    score_mismatches: list[dict[str, Any]] = []
+    missing_candidates: list[dict[str, str]] = []
+    extra_candidates: list[dict[str, str]] = []
+
+    for ranking_type in RANKING_TYPES:
+        expected_order = expected_rankings[ranking_type]
+        actual_order = actual_rankings.get(ranking_type, [])
+        if actual_order != expected_order:
+            ranking_mismatches.append(
+                {
+                    "ranking_type": ranking_type,
+                    "expected": expected_order,
+                    "actual": actual_order,
+                }
+            )
+
+        expected_candidate_set = set(expected_scores[ranking_type])
+        actual_score_map = actual_scores.get(ranking_type, {})
+        actual_candidate_set = set(actual_score_map)
+        ranking_candidate_set = set(actual_order)
+        for candidate in sorted(
+            (expected_candidate_set - actual_candidate_set)
+            | (expected_candidate_set - ranking_candidate_set)
+        ):
+            missing_candidates.append(
+                {"ranking_type": ranking_type, "candidate_id": candidate}
+            )
+        for candidate in sorted(
+            (actual_candidate_set - expected_candidate_set)
+            | (ranking_candidate_set - expected_candidate_set)
+        ):
+            extra_candidates.append(
+                {"ranking_type": ranking_type, "candidate_id": candidate}
+            )
+        for candidate in sorted(expected_candidate_set & actual_candidate_set):
+            expected_score = expected_scores[ranking_type][candidate]
+            actual_score = actual_score_map[candidate]
+            if actual_score != expected_score:
+                score_mismatches.append(
+                    {
+                        "ranking_type": ranking_type,
+                        "candidate_id": candidate,
+                        "expected": expected_score,
+                        "actual": actual_score,
+                    }
+                )
+
+    return {
+        "expected_rankings": expected_rankings,
+        "actual_rankings": actual_rankings,
+        "expected_scores": expected_scores,
+        "actual_scores": actual_scores,
+        "ranking_mismatches": ranking_mismatches[:_DIAGNOSTIC_LIMIT],
+        "ranking_mismatches_total": len(ranking_mismatches),
+        "score_mismatches": score_mismatches[:_DIAGNOSTIC_LIMIT],
+        "score_mismatches_total": len(score_mismatches),
+        "missing_ranking_types": missing_ranking_types[:_DIAGNOSTIC_LIMIT],
+        "missing_ranking_types_total": len(missing_ranking_types),
+        "extra_ranking_types": extra_ranking_types[:_DIAGNOSTIC_LIMIT],
+        "extra_ranking_types_total": len(extra_ranking_types),
+        "missing_candidates": missing_candidates[:_DIAGNOSTIC_LIMIT],
+        "missing_candidates_total": len(missing_candidates),
+        "extra_candidates": extra_candidates[:_DIAGNOSTIC_LIMIT],
+        "extra_candidates_total": len(extra_candidates),
+        "diagnostic_limit": _DIAGNOSTIC_LIMIT,
+    }
+
+
 def validate_stored_rankings(
     candidate_ids: list[str],
     metrics: list[dict[str, Any]],
@@ -75,6 +162,14 @@ def validate_stored_rankings(
     excluded: set[str],
 ) -> dict[str, list[str]]:
     rankings, scores = derive_rankings(candidate_ids, metrics, excluded)
-    if stored["ordered_candidates"] != rankings or stored["scores"] != scores:
-        raise SemanticError("stored ranking or score mismatch")
+    actual_rankings = stored["ordered_candidates"]
+    actual_scores = stored["scores"]
+    if actual_rankings != rankings or actual_scores != scores:
+        details = _ranking_mismatch_diagnostic(
+            rankings, scores, actual_rankings, actual_scores
+        )
+        raise SemanticError(
+            "stored ranking or score mismatch: "
+            + json.dumps(details, sort_keys=True, separators=(",", ":"))
+        )
     return rankings
