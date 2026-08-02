@@ -31,9 +31,7 @@ def enrich_phase2_contract(contract: dict[str, Any]) -> dict[str, Any]:
     return enriched
 
 
-def rewrite_phase2_validation_error(
-    exc: SemanticError, artifact: dict[str, Any]
-) -> SemanticError:
+def rewrite_phase2_validation_error(exc: SemanticError, artifact: dict[str, Any]) -> SemanticError:
     """Replace generic Phase 2 errors with deterministic, bounded diagnostics."""
     if artifact.get("mode") != "initial" or artifact.get("phase") != 2:
         return exc
@@ -142,13 +140,9 @@ def _coverage_diagnostic(value: dict[str, Any]) -> str:
     details = {
         "expected_count": len(expected),
         "actual_count": len(actual),
-        "missing_pair_metrics": [
-            _render_pair_metric(item) for item in missing[:_DIAGNOSTIC_LIMIT]
-        ],
+        "missing_pair_metrics": [_render_pair_metric(item) for item in missing[:_DIAGNOSTIC_LIMIT]],
         "missing_pair_metrics_total": len(missing),
-        "extra_pair_metrics": [
-            _render_pair_metric(item) for item in extra[:_DIAGNOSTIC_LIMIT]
-        ],
+        "extra_pair_metrics": [_render_pair_metric(item) for item in extra[:_DIAGNOSTIC_LIMIT]],
         "extra_pair_metrics_total": len(extra),
         "diagnostic_limit": _DIAGNOSTIC_LIMIT,
     }

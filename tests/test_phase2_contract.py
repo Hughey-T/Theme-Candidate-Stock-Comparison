@@ -33,9 +33,7 @@ def _phase2_for_two_candidates():
 
 
 def test_enrich_phase2_contract_only_changes_initial_phase2():
-    phase2 = enrich_phase2_contract(
-        {"mode": "initial", "phase": 2, "phase_requirements": "old"}
-    )
+    phase2 = enrich_phase2_contract({"mode": "initial", "phase": 2, "phase_requirements": "old"})
     assert phase2["phase_requirements"] == INITIAL_PHASE2_REQUIREMENT
     assert "unordered candidate pair" in phase2["phase_requirements"]
     assert "combination(candidate_count, 2)" in phase2["phase_requirements"]
@@ -92,9 +90,7 @@ def test_pair_metric_coverage_diagnostic_counts_missing_rows():
 def test_action_contract_and_retryable_phase2_error_leave_state_unchanged(tmp_path):
     client = TestClient(create_app(JsonVolumeStorage(tmp_path), "secret"))
     headers = {"Authorization": "Bearer secret"}
-    session_id = client.post(
-        "/v1/sessions", headers=headers, json=upstream()
-    ).json()["session_id"]
+    session_id = client.post("/v1/sessions", headers=headers, json=upstream()).json()["session_id"]
     accepted = client.post(
         f"/v1/sessions/{session_id}/phases",
         headers=headers,
@@ -102,9 +98,7 @@ def test_action_contract_and_retryable_phase2_error_leave_state_unchanged(tmp_pa
     )
     assert accepted.status_code == 200
 
-    contract = client.get(
-        f"/v1/sessions/{session_id}/next-contract", headers=headers
-    ).json()
+    contract = client.get(f"/v1/sessions/{session_id}/next-contract", headers=headers).json()
     assert contract["phase"] == 2
     assert "unique union" in contract["phase_requirements"]
     assert "unordered candidate pair" in contract["phase_requirements"]
@@ -119,9 +113,7 @@ def test_action_contract_and_retryable_phase2_error_leave_state_unchanged(tmp_pa
         }
     ]
     before = (tmp_path / f"{session_id}.json").read_bytes()
-    response = client.post(
-        f"/v1/sessions/{session_id}/phases", headers=headers, json=bad
-    )
+    response = client.post(f"/v1/sessions/{session_id}/phases", headers=headers, json=bad)
     error = response.json()["error"]
     assert response.status_code == 422
     assert error["retryable"] is True
