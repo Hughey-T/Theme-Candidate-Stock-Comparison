@@ -1,4 +1,4 @@
-"""Phase 2 contract guidance and bounded diagnostics for the Action API."""
+"""Phase-specific contract guidance and bounded diagnostics for the Action API."""
 
 from __future__ import annotations
 
@@ -17,17 +17,39 @@ INITIAL_PHASE2_REQUIREMENT = (
     "combination(candidate_count, 2) × unique_metric_count."
 )
 
+INITIAL_PHASE10_REQUIREMENT = (
+    "Recalculate ranking and typed handoff. The authoritative ranking types are company_quality, "
+    "tactical, structural, risk_adjusted, and portfolio_fit. atomic_ranking_metrics must cover "
+    "every candidate × every ranking type. Each value must be within [0,1] and each weight must be "
+    "non-negative. A metric is usable only when applicable is true, state is observed or estimated, "
+    "and comparability is comparable or partially_comparable. For a usable metric, "
+    "effective_weight must exactly equal weight; otherwise effective_weight must be 0. Each "
+    "candidate × ranking type must have positive total usable weight, and a positive-weight "
+    "dependency_root may appear only once within that candidate × ranking type. Compute each exact "
+    "stored score as sum(value * effective_weight) / sum(effective_weight), without display rounding. "
+    "Order candidates by exact score descending, with candidate_id ascending as the deterministic "
+    "tie-break. stored_scores and stored_rankings must be complete maps and must exactly equal these "
+    "runtime derivations; do not use rounded scores or prose ranking order."
+)
+
 _DIAGNOSTIC_LIMIT = 20
 _METRIC_ERROR = "comparability matrix unknown or missing metric"
 _COVERAGE_ERROR = "comparability matrix pair/metric coverage mismatch"
 
 
 def enrich_phase2_contract(contract: dict[str, Any]) -> dict[str, Any]:
-    """Expose the hidden Phase 2 semantic requirements in the next-contract response."""
-    if contract.get("mode") != "initial" or contract.get("phase") != 2:
+    """Expose hidden Initial Phase 2 and Phase 10 requirements in next-contract responses."""
+    if contract.get("mode") != "initial":
+        return contract
+    phase = contract.get("phase")
+    if phase == 2:
+        requirement = INITIAL_PHASE2_REQUIREMENT
+    elif phase == 10:
+        requirement = INITIAL_PHASE10_REQUIREMENT
+    else:
         return contract
     enriched = dict(contract)
-    enriched["phase_requirements"] = INITIAL_PHASE2_REQUIREMENT
+    enriched["phase_requirements"] = requirement
     return enriched
 
 
