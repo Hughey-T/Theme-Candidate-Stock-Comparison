@@ -45,9 +45,7 @@ def _three_candidate_metrics() -> list[dict[str, object]]:
 
 
 def test_phase10_contract_exposes_exact_derivation_rules():
-    contract = enrich_phase2_contract(
-        {"mode": "initial", "phase": 10, "phase_requirements": "old"}
-    )
+    contract = enrich_phase2_contract({"mode": "initial", "phase": 10, "phase_requirements": "old"})
     assert contract["phase_requirements"] == INITIAL_PHASE10_REQUIREMENT
     requirement = contract["phase_requirements"]
     for ranking_type in RANKING_TYPES:
@@ -70,9 +68,10 @@ def test_three_candidate_five_ranking_exact_scores_and_tie_break():
         "ordered_candidates": copy.deepcopy(rankings),
         "scores": copy.deepcopy(scores),
     }
-    assert validate_stored_rankings(
-        ["C", "B", "A"], _three_candidate_metrics(), stored, set()
-    ) == rankings
+    assert (
+        validate_stored_rankings(["C", "B", "A"], _three_candidate_metrics(), stored, set())
+        == rankings
+    )
 
 
 def test_ranking_diagnostic_supports_exact_repair():
@@ -85,9 +84,7 @@ def test_ranking_diagnostic_supports_exact_repair():
     stored["scores"]["tactical"]["A"] = round(scores["tactical"]["A"], 3)
 
     with pytest.raises(SemanticError) as captured:
-        validate_stored_rankings(
-            ["A", "B", "C"], _three_candidate_metrics(), stored, set()
-        )
+        validate_stored_rankings(["A", "B", "C"], _three_candidate_metrics(), stored, set())
 
     message = str(captured.value)
     assert message.startswith("stored ranking or score mismatch: ")
@@ -104,9 +101,10 @@ def test_ranking_diagnostic_supports_exact_repair():
         "ordered_candidates": details["expected_rankings"],
         "scores": details["expected_scores"],
     }
-    assert validate_stored_rankings(
-        ["A", "B", "C"], _three_candidate_metrics(), repaired, set()
-    ) == rankings
+    assert (
+        validate_stored_rankings(["A", "B", "C"], _three_candidate_metrics(), repaired, set())
+        == rankings
+    )
 
 
 @pytest.mark.parametrize(
@@ -120,9 +118,7 @@ def test_ranking_diagnostic_supports_exact_repair():
 def test_atomic_metric_integrity_failures_remain_strict(mutation: str, message: str):
     rows = _three_candidate_metrics()
     target = next(
-        row
-        for row in rows
-        if row["candidate_id"] == "A" and row["ranking_type"] == "tactical"
+        row for row in rows if row["candidate_id"] == "A" and row["ranking_type"] == "tactical"
     )
     if mutation == "effective_weight":
         target["state"] = "missing"
@@ -150,9 +146,7 @@ def test_phase10_api_rejection_preserves_state_and_expected_maps_repair(tmp_path
     storage = JsonVolumeStorage(tmp_path)
     client = TestClient(create_app(storage, "secret"))
     headers = {"Authorization": "Bearer secret"}
-    session_id = client.post(
-        "/v1/sessions", headers=headers, json=upstream()
-    ).json()["session_id"]
+    session_id = client.post("/v1/sessions", headers=headers, json=upstream()).json()["session_id"]
 
     for phase in range(1, 10):
         response = client.post(
@@ -162,18 +156,14 @@ def test_phase10_api_rejection_preserves_state_and_expected_maps_repair(tmp_path
         )
         assert response.status_code == 200, response.json()
 
-    contract = client.get(
-        f"/v1/sessions/{session_id}/next-contract", headers=headers
-    ).json()
+    contract = client.get(f"/v1/sessions/{session_id}/next-contract", headers=headers).json()
     assert contract["phase"] == 10
     assert contract["phase_requirements"] == INITIAL_PHASE10_REQUIREMENT
 
     bad = runtime_artifact(10)
     selection = bad["payload"]["final_selection"]
     tactical = next(
-        row
-        for row in selection["atomic_ranking_metrics"]
-        if row["ranking_type"] == "tactical"
+        row for row in selection["atomic_ranking_metrics"] if row["ranking_type"] == "tactical"
     )
     extra = copy.deepcopy(tactical)
     extra.update(
@@ -186,9 +176,7 @@ def test_phase10_api_rejection_preserves_state_and_expected_maps_repair(tmp_path
     selection["stored_scores"]["tactical"]["A"] = 0.533
 
     before = storage.path(session_id).read_bytes()
-    rejected = client.post(
-        f"/v1/sessions/{session_id}/phases", headers=headers, json=bad
-    )
+    rejected = client.post(f"/v1/sessions/{session_id}/phases", headers=headers, json=bad)
     error = rejected.json()["error"]
     assert rejected.status_code == 422
     assert error["retryable"] is True
@@ -203,9 +191,7 @@ def test_phase10_api_rejection_preserves_state_and_expected_maps_repair(tmp_path
     details = json.loads(error["message"].split(": ", 1)[1])
     selection["stored_rankings"] = details["expected_rankings"]
     selection["stored_scores"] = details["expected_scores"]
-    accepted = client.post(
-        f"/v1/sessions/{session_id}/phases", headers=headers, json=bad
-    )
+    accepted = client.post(f"/v1/sessions/{session_id}/phases", headers=headers, json=bad)
     assert accepted.status_code == 200, accepted.json()
     assert accepted.json()["status"] == "complete"
     assert accepted.json()["active_handoff"]["handoff_id"] == "h1"

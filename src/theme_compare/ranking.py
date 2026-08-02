@@ -111,16 +111,12 @@ def _ranking_mismatch_diagnostic(
             (expected_candidate_set - actual_candidate_set)
             | (expected_candidate_set - ranking_candidate_set)
         ):
-            missing_candidates.append(
-                {"ranking_type": ranking_type, "candidate_id": candidate}
-            )
+            missing_candidates.append({"ranking_type": ranking_type, "candidate_id": candidate})
         for candidate in sorted(
             (actual_candidate_set - expected_candidate_set)
             | (ranking_candidate_set - expected_candidate_set)
         ):
-            extra_candidates.append(
-                {"ranking_type": ranking_type, "candidate_id": candidate}
-            )
+            extra_candidates.append({"ranking_type": ranking_type, "candidate_id": candidate})
         for candidate in sorted(expected_candidate_set & actual_candidate_set):
             expected_score = expected_scores[ranking_type][candidate]
             actual_score = actual_score_map[candidate]
@@ -165,9 +161,7 @@ def validate_stored_rankings(
     actual_rankings = stored["ordered_candidates"]
     actual_scores = stored["scores"]
     if actual_rankings != rankings or actual_scores != scores:
-        details = _ranking_mismatch_diagnostic(
-            rankings, scores, actual_rankings, actual_scores
-        )
+        details = _ranking_mismatch_diagnostic(rankings, scores, actual_rankings, actual_scores)
         raise SemanticError(
             "stored ranking or score mismatch: "
             + json.dumps(details, sort_keys=True, separators=(",", ":"))
