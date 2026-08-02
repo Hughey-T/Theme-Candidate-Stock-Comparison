@@ -33,7 +33,9 @@ def _phase2_for_two_candidates():
 
 
 def test_enrich_phase2_contract_only_changes_initial_phase2():
-    phase2 = enrich_phase2_contract({"mode": "initial", "phase": 2, "phase_requirements": "old"})
+    phase2 = enrich_phase2_contract(
+        {"mode": "initial", "phase": 2, "phase_requirements": "old"}
+    )
     assert phase2["phase_requirements"] == INITIAL_PHASE2_REQUIREMENT
     assert "unordered candidate pair" in phase2["phase_requirements"]
     assert "combination(candidate_count, 2)" in phase2["phase_requirements"]
@@ -90,7 +92,9 @@ def test_pair_metric_coverage_diagnostic_counts_missing_rows():
 def test_action_contract_and_retryable_phase2_error_leave_state_unchanged(tmp_path):
     client = TestClient(create_app(JsonVolumeStorage(tmp_path), "secret"))
     headers = {"Authorization": "Bearer secret"}
-    session_id = client.post("/v1/sessions", headers=headers, json=upstream()).json()["session_id"]
+    session_id = client.post(
+        "/v1/sessions", headers=headers, json=upstream()
+    ).json()["session_id"]
     accepted = client.post(
         f"/v1/sessions/{session_id}/phases",
         headers=headers,
