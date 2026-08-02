@@ -111,9 +111,7 @@ def _rewrite_phase10_hard_gates_error(
                     }
                 )
     else:
-        invalid_values.append(
-            {"candidate_id": "*", "reason": "hard_gates must be an object"}
-        )
+        invalid_values.append({"candidate_id": "*", "reason": "hard_gates must be an object"})
 
     if not missing and not extra and not invalid_values and hard_gates:
         return exc

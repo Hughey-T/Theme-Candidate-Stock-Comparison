@@ -18,9 +18,7 @@ from theme_compare.storage import JsonVolumeStorage
 
 
 def test_phase10_contract_requires_complete_hard_gate_map():
-    contract = enrich_phase2_contract(
-        {"mode": "initial", "phase": 10, "phase_requirements": "old"}
-    )
+    contract = enrich_phase2_contract({"mode": "initial", "phase": 10, "phase_requirements": "old"})
     requirement = contract["phase_requirements"]
     assert requirement == INITIAL_PHASE10_REQUIREMENT
     assert "key set exactly equals candidate_ids" in requirement
@@ -58,9 +56,7 @@ def test_phase10_empty_hard_gates_rejection_preserves_state_and_repair_completes
     storage = JsonVolumeStorage(tmp_path)
     client = TestClient(create_app(storage, "secret"))
     headers = {"Authorization": "Bearer secret"}
-    session_id = client.post("/v1/sessions", headers=headers, json=upstream()).json()[
-        "session_id"
-    ]
+    session_id = client.post("/v1/sessions", headers=headers, json=upstream()).json()["session_id"]
 
     for phase in range(1, 10):
         response = client.post(
@@ -74,9 +70,7 @@ def test_phase10_empty_hard_gates_rejection_preserves_state_and_repair_completes
     bad["payload"]["final_selection"]["hard_gates"] = {}
     before = storage.path(session_id).read_bytes()
 
-    rejected = client.post(
-        f"/v1/sessions/{session_id}/phases", headers=headers, json=bad
-    )
+    rejected = client.post(f"/v1/sessions/{session_id}/phases", headers=headers, json=bad)
     error = rejected.json()["error"]
     assert rejected.status_code == 422
     assert error["retryable"] is True
@@ -89,12 +83,8 @@ def test_phase10_empty_hard_gates_rejection_preserves_state_and_repair_completes
     assert summary["completed_phases"] == list(range(1, 10))
 
     details = json.loads(error["message"].split(": ", 1)[1])
-    bad["payload"]["final_selection"]["hard_gates"] = details[
-        "expected_hard_gates"
-    ]
-    accepted = client.post(
-        f"/v1/sessions/{session_id}/phases", headers=headers, json=bad
-    )
+    bad["payload"]["final_selection"]["hard_gates"] = details["expected_hard_gates"]
+    accepted = client.post(f"/v1/sessions/{session_id}/phases", headers=headers, json=bad)
     assert accepted.status_code == 200, accepted.json()
     assert accepted.json()["status"] == "complete"
     assert accepted.json()["active_handoff"]["handoff_id"] == "h1"
