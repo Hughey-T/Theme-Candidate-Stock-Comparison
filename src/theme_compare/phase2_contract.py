@@ -29,7 +29,11 @@ INITIAL_PHASE10_REQUIREMENT = (
     "stored score as sum(value * effective_weight) / sum(effective_weight), without display rounding. "
     "Order candidates by exact score descending, with candidate_id ascending as the deterministic "
     "tie-break. stored_scores and stored_rankings must be complete maps and must exactly equal these "
-    "runtime derivations; do not use rounded scores or prose ranking order."
+    "runtime derivations; do not use rounded scores or prose ranking order. hard_gates must be an "
+    "object whose key set exactly equals candidate_ids. Every candidate must have a key even when "
+    "no hard gate applies; represent that case with an empty array, for example candidate_id: []. "
+    "Each non-empty gate entry must be a non-empty string. An empty hard_gates object, missing "
+    "candidate keys, and extra candidate keys are forbidden."
 )
 
 _DIAGNOSTIC_LIMIT = 20
@@ -54,8 +58,12 @@ def enrich_phase2_contract(contract: dict[str, Any]) -> dict[str, Any]:
 
 
 def rewrite_phase2_validation_error(exc: SemanticError, artifact: dict[str, Any]) -> SemanticError:
-    """Replace generic Phase 2 errors with deterministic, bounded diagnostics."""
-    if artifact.get("mode") != "initial" or artifact.get("phase") != 2:
+    """Replace generic phase errors with deterministic, bounded diagnostics."""
+    if artifact.get("mode") != "initial":
+        return exc
+    if artifact.get("phase") == 10:
+        return _rewrite_phase10_hard_gates_error(exc, artifact)
+    if artifact.get("phase") != 2:
         return exc
 
     business_models = artifact.get("payload", {}).get("business_models")
@@ -68,6 +76,66 @@ def rewrite_phase2_validation_error(exc: SemanticError, artifact: dict[str, Any]
     if message == _COVERAGE_ERROR:
         return SemanticError(_coverage_diagnostic(business_models))
     return exc
+
+
+def _rewrite_phase10_hard_gates_error(
+    exc: SemanticError, artifact: dict[str, Any]
+) -> SemanticError:
+    selection = artifact.get("payload", {}).get("final_selection")
+    if not isinstance(selection, dict):
+        return exc
+    candidate_ids = selection.get("candidate_ids")
+    if not isinstance(candidate_ids, list) or not all(
+        isinstance(candidate, str) and candidate for candidate in candidate_ids
+    ):
+        return exc
+
+    expected = sorted(set(candidate_ids))
+    hard_gates = selection.get("hard_gates")
+    actual = sorted(hard_gates) if isinstance(hard_gates, dict) else []
+    missing = sorted(set(expected) - set(actual))
+    extra = sorted(set(actual) - set(expected))
+    invalid_values: list[dict[str, str]] = []
+    if isinstance(hard_gates, dict):
+        for candidate in actual:
+            gates = hard_gates[candidate]
+            if not isinstance(gates, list):
+                invalid_values.append(
+                    {"candidate_id": candidate, "reason": "value must be an array"}
+                )
+            elif any(not isinstance(gate, str) or not gate for gate in gates):
+                invalid_values.append(
+                    {
+                        "candidate_id": candidate,
+                        "reason": "every gate must be a non-empty string",
+                    }
+                )
+    else:
+        invalid_values.append(
+            {"candidate_id": "*", "reason": "hard_gates must be an object"}
+        )
+
+    if not missing and not extra and not invalid_values and hard_gates:
+        return exc
+
+    details = {
+        "expected_candidates": expected[:_DIAGNOSTIC_LIMIT],
+        "expected_candidates_total": len(expected),
+        "actual_candidates": actual[:_DIAGNOSTIC_LIMIT],
+        "actual_candidates_total": len(actual),
+        "missing_candidates": missing[:_DIAGNOSTIC_LIMIT],
+        "missing_candidates_total": len(missing),
+        "extra_candidates": extra[:_DIAGNOSTIC_LIMIT],
+        "extra_candidates_total": len(extra),
+        "invalid_gate_values": invalid_values[:_DIAGNOSTIC_LIMIT],
+        "invalid_gate_values_total": len(invalid_values),
+        "expected_hard_gates": {candidate: [] for candidate in expected},
+        "diagnostic_limit": _DIAGNOSTIC_LIMIT,
+    }
+    return SemanticError(
+        "Phase 10 hard_gates contract mismatch: "
+        + json.dumps(details, sort_keys=True, separators=(",", ":"))
+    )
 
 
 def _metric_vocabulary(value: dict[str, Any]) -> tuple[list[str], list[str]]:
