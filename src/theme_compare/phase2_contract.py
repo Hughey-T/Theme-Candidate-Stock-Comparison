@@ -116,6 +116,14 @@ def _rewrite_phase10_hard_gates_error(
     if not missing and not extra and not invalid_values and hard_gates:
         return exc
 
+    expected_hard_gates: dict[str, list[str]] = {}
+    for candidate in expected:
+        gates = hard_gates.get(candidate) if isinstance(hard_gates, dict) else None
+        if isinstance(gates, list) and all(isinstance(gate, str) and gate for gate in gates):
+            expected_hard_gates[candidate] = list(gates)
+        else:
+            expected_hard_gates[candidate] = []
+
     details = {
         "expected_candidates": expected[:_DIAGNOSTIC_LIMIT],
         "expected_candidates_total": len(expected),
@@ -127,7 +135,7 @@ def _rewrite_phase10_hard_gates_error(
         "extra_candidates_total": len(extra),
         "invalid_gate_values": invalid_values[:_DIAGNOSTIC_LIMIT],
         "invalid_gate_values_total": len(invalid_values),
-        "expected_hard_gates": {candidate: [] for candidate in expected},
+        "expected_hard_gates": expected_hard_gates,
         "diagnostic_limit": _DIAGNOSTIC_LIMIT,
     }
     return SemanticError(
