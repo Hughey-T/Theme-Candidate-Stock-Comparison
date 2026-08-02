@@ -11,6 +11,7 @@ from fastapi import Depends, FastAPI, HTTPException, Query, Request
 from fastapi.responses import JSONResponse
 
 from .models import SemanticError, strict_json_loads
+from .phase2_contract import enrich_phase2_contract, rewrite_phase2_validation_error
 from .runtime import RuntimeIntegrityError, RuntimeService
 from .storage import JsonVolumeStorage, StorageError
 
@@ -139,7 +140,7 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
         operation_id="getNextPhaseContract",
     )
     def contract(session_id: str) -> dict[str, Any]:
-        return service.contract(session_id)
+        return enrich_phase2_contract(service.contract(session_id))
 
     @app.post(
         "/v1/sessions/{session_id}/phases",
@@ -147,7 +148,11 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
         operation_id="submitComparisonPhase",
     )
     async def submit(session_id: str, request: Request) -> dict[str, Any]:
-        return service.submit(session_id, await body(request))
+        artifact = await body(request)
+        try:
+            return service.submit(session_id, artifact)
+        except SemanticError as exc:
+            raise rewrite_phase2_validation_error(exc, artifact) from exc
 
     @app.post(
         "/v1/sessions/{session_id}/updates",

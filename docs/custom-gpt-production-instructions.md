@@ -16,6 +16,7 @@
 10. runtimeが市場調査または分析を生成したとは表現しない。runtimeは検証・永続化・generation・handoff管理だけを担当する。
 11. handoffは最大2候補または`NO_SELECTION`を個別株完全分析へ渡す。
 12. 買値、分割購入、損切り、注文執行は生成しない。
+13. Initial Phase 2では、固定metric名を推測しない。next-contractが示すとおり、各candidateの`primary_metric`と`secondary_metric`の一意な和集合を正本metric vocabularyとし、全unordered candidate pair × 全metricを重複・欠落・追加なしで`comparability_matrix`へ記録する。
 
 ## Action configuration
 
