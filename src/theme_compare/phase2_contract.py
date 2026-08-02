@@ -94,7 +94,10 @@ def _metric_diagnostic(value: dict[str, Any]) -> str:
 
 def _pair_metric_rows(
     value: dict[str, Any],
-) -> tuple[set[tuple[str, str, str]], set[tuple[str, str, str]]]:
+) -> tuple[
+    set[tuple[str, str, str]],
+    set[tuple[str, str, str]],
+]:
     candidates = sorted(
         {
             row.get("candidate_id")
