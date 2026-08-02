@@ -49,25 +49,24 @@ def rewrite_phase2_validation_error(exc: SemanticError, artifact: dict[str, Any]
 
 
 def _metric_vocabulary(value: dict[str, Any]) -> tuple[list[str], list[str]]:
-    candidate_rows = value.get("candidates", [])
-    matrix_rows = value.get("comparability_matrix", [])
-    expected = sorted(
-        {
-            metric
-            for row in candidate_rows
-            if isinstance(row, dict)
-            for metric in (row.get("primary_metric"), row.get("secondary_metric"))
-            if isinstance(metric, str)
-        }
-    )
-    actual = sorted(
-        {
-            row.get("metric")
-            for row in matrix_rows
-            if isinstance(row, dict) and isinstance(row.get("metric"), str)
-        }
-    )
-    return expected, actual
+    expected_set: set[str] = set()
+    for row in value.get("candidates", []):
+        if not isinstance(row, dict):
+            continue
+        for key in ("primary_metric", "secondary_metric"):
+            metric = row.get(key)
+            if isinstance(metric, str):
+                expected_set.add(metric)
+
+    actual_set: set[str] = set()
+    for row in value.get("comparability_matrix", []):
+        if not isinstance(row, dict):
+            continue
+        metric = row.get("metric")
+        if isinstance(metric, str):
+            actual_set.add(metric)
+
+    return sorted(expected_set), sorted(actual_set)
 
 
 def _metric_diagnostic(value: dict[str, Any]) -> str:
@@ -96,13 +95,15 @@ def _pair_metric_rows(
     set[tuple[str, str, str]],
     set[tuple[str, str, str]],
 ]:
-    candidates = sorted(
-        {
-            row.get("candidate_id")
-            for row in value.get("candidates", [])
-            if isinstance(row, dict) and isinstance(row.get("candidate_id"), str)
-        }
-    )
+    candidate_ids: set[str] = set()
+    for row in value.get("candidates", []):
+        if not isinstance(row, dict):
+            continue
+        candidate_id = row.get("candidate_id")
+        if isinstance(candidate_id, str):
+            candidate_ids.add(candidate_id)
+    candidates = sorted(candidate_ids)
+
     metrics, _ = _metric_vocabulary(value)
     expected = {
         (left, right, metric)
@@ -117,7 +118,7 @@ def _pair_metric_rows(
         left = row.get("left_candidate_id")
         right = row.get("right_candidate_id")
         metric = row.get("metric")
-        if not all(isinstance(item, str) for item in (left, right, metric)):
+        if not isinstance(left, str) or not isinstance(right, str) or not isinstance(metric, str):
             continue
         first, second = sorted((left, right))
         actual.add((first, second, metric))
