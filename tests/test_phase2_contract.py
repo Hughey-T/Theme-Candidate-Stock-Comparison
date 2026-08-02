@@ -7,7 +7,7 @@ import pytest
 
 pytest.importorskip("fastapi")
 from fastapi.testclient import TestClient
-from phase_fixtures import CANDIDATE, CANDIDATE_B, artifact
+from phase_fixtures import artifact
 from test_runtime import runtime_artifact, upstream
 from theme_compare.api import create_app
 from theme_compare.models import SemanticError
