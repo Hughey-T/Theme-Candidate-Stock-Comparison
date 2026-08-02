@@ -165,14 +165,7 @@ def test_phase10_api_rejection_preserves_state_and_expected_maps_repair(tmp_path
     tactical = next(
         row for row in selection["atomic_ranking_metrics"] if row["ranking_type"] == "tactical"
     )
-    extra = copy.deepcopy(tactical)
-    extra.update(
-        value=0.4,
-        weight=2.0,
-        effective_weight=2.0,
-        dependency_root="tactical-secondary",
-    )
-    selection["atomic_ranking_metrics"].append(extra)
+    tactical["value"] = 0.5333333333333333
     selection["stored_scores"]["tactical"]["A"] = 0.533
 
     before = storage.path(session_id).read_bytes()
