@@ -14,6 +14,7 @@ from .models import SemanticError, strict_json_loads
 from .phase2_contract import enrich_phase2_contract, rewrite_phase2_validation_error
 from .runtime import RuntimeIntegrityError, RuntimeService
 from .storage import JsonVolumeStorage, StorageError
+from .v2_runtime import V2RuntimeService
 
 
 def app_factory() -> FastAPI:
@@ -26,10 +27,11 @@ def app_factory() -> FastAPI:
 
 def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
     service = RuntimeService(storage)
+    v2 = V2RuntimeService(storage)
     expected_key = api_key or ""
     app = FastAPI(
         title="Theme Candidate Comparison Private Runtime",
-        version="1.2.0",
+        version="2.0.0",
         docs_url=None,
         redoc_url=None,
     )
@@ -169,5 +171,70 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
     )
     def handoff(session_id: str, include_history: bool = Query(False)) -> dict[str, Any]:
         return service.handoff(session_id, include_history)
+
+    @app.post(
+        "/v2/sessions",
+        dependencies=[Depends(authorize)],
+        status_code=201,
+        operation_id="createBlindComparisonSessionV2",
+    )
+    async def create_v2(request: Request) -> dict[str, Any]:
+        return v2.create(await body(request))
+
+    @app.get(
+        "/v2/sessions/{session_id}/next-contract",
+        dependencies=[Depends(authorize)],
+        operation_id="getBlindPhaseContractV2",
+    )
+    def contract_v2(session_id: str) -> dict[str, Any]:
+        return v2.contract(session_id)
+
+    @app.post(
+        "/v2/sessions/{session_id}/phases",
+        dependencies=[Depends(authorize)],
+        operation_id="submitBlindPhaseV2",
+    )
+    async def submit_v2(session_id: str, request: Request) -> dict[str, Any]:
+        return v2.submit(session_id, await body(request))
+
+    @app.post(
+        "/v2/sessions/{session_id}/updates",
+        dependencies=[Depends(authorize)],
+        operation_id="startBlindComparisonUpdateV2",
+    )
+    async def update_v2(session_id: str, request: Request) -> dict[str, Any]:
+        return v2.start_update(session_id, await body(request))
+
+    @app.get(
+        "/v2/sessions/{session_id}/reconciliation",
+        dependencies=[Depends(authorize)],
+        operation_id="discloseMechanicalReconciliationV2",
+    )
+    def reconcile_v2(session_id: str) -> dict[str, Any]:
+        return v2.disclose(session_id)
+
+    @app.get(
+        "/v2/sessions/{session_id}/handoffs/blind",
+        dependencies=[Depends(authorize)],
+        operation_id="getBlindIndividualHandoffV2",
+    )
+    def blind_handoff_v2(session_id: str) -> dict[str, Any]:
+        return v2.handoff(session_id, False)
+
+    @app.post(
+        "/v2/sessions/{session_id}/handoffs/blind/acknowledge",
+        dependencies=[Depends(authorize)],
+        operation_id="acknowledgeBlindAnalysisV2",
+    )
+    def acknowledge_blind_v2(session_id: str) -> dict[str, Any]:
+        return v2.acknowledge_blind(session_id)
+
+    @app.get(
+        "/v2/sessions/{session_id}/handoffs/reconciliation",
+        dependencies=[Depends(authorize)],
+        operation_id="getReconciliationHandoffV2",
+    )
+    def reconciliation_handoff_v2(session_id: str) -> dict[str, Any]:
+        return v2.handoff(session_id, True)
 
     return app

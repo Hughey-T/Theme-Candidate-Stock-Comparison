@@ -5910,7 +5910,8 @@
         "generated_not_persisted",
         "persisted_pending_verification",
         "integrity_verified",
-        "failed_terminal"
+        "failed_terminal",
+        "superseded"
       ]
     },
     "handoff_history": {

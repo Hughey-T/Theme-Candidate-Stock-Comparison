@@ -29,7 +29,7 @@ jobs:
       - run: ruff format --check .
       - run: mypy src
       - name: Schema samples and representative mutation suite
-        run: pytest -q tests/test_schemas.py tests/test_samples.py tests/test_semantics.py tests/test_publication.py
+        run: pytest -q tests/test_schemas.py tests/test_samples.py tests/test_semantics.py tests/test_publication.py tests/test_v2_runtime.py
   fresh-clone-e2e:
     runs-on: ubuntu-latest
     steps:
@@ -42,6 +42,10 @@ jobs:
       - name: Import wheel and packaged schemas outside checkout
         run: cd /tmp && /tmp/theme-venv/bin/python -c "from theme_compare.schema_runtime import schema_bytes; from theme_compare.state import StateMachine; assert b'oneOf' in schema_bytes('phase-artifact')"
       - run: cd clean && /tmp/theme-venv/bin/pytest -q tests/test_state.py tests/test_publication.py
+      - name: Build standards-based wheel and install it
+        run: cd clean && /tmp/theme-venv/bin/python -m build && /tmp/theme-venv/bin/pip install --force-reinstall dist/*.whl
+      - name: Import installed package and packaged v2 Schema
+        run: cd /tmp && /tmp/theme-venv/bin/python -c "import theme_compare; from theme_compare.schema_runtime import schema_bytes; assert b'Theme comparison contract 2.0' in schema_bytes('comparison-contract-v2')"
 
   container-runtime:
     runs-on: ubuntu-latest

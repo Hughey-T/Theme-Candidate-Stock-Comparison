@@ -40,3 +40,7 @@ Docker run -d --name theme-compare --restart unless-stopped --env-file .env `
   -p 127.0.0.1:8000:8000 -v theme-compare-data:/data/sessions theme-compare:latest
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
+
+## Contract 2.0 rollout and rollback
+
+New integrations use `/v2/sessions` and the v2 next-contract, phase, update, reconciliation, and dual-handoff operations in OpenAPI. Keep `/v1` available while active 1.0 sessions finish. Do not point an existing v1 session at v2: create a new explicit v2 session. Completed v1 publications remain immutable/read-only. Rollback deploys the prior image and routes new traffic to `/v1`; v2 state files are retained, not converted or deleted. Back up both `*.json` and `*.v2.json` under the mounted session volume and restore into an empty volume before health and readback checks.
