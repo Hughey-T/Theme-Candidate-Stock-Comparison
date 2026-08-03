@@ -10,6 +10,7 @@ VALID = {
     "no-selection",
     "update-primary-change",
     "update-no-change",
+    "v2-blind-session",
 }
 INVALID = {
     "mixed-generation",

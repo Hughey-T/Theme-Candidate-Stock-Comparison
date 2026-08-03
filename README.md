@@ -4,9 +4,11 @@
 
 ## Operation and boundaries
 
-ユーザー操作は`次`と初回完了後の`更新`だけです。1回に1 Phase、初回10、更新2です。候補上限は12→8→5、handoff最大2。永続stateを毎回bytesから再読込し、Schema→semantic→transition→atomic persistenceの順で検証します。generation/candidate set/cutoffを固定し、mixed generationや壊れたlatestでは停止して旧版へfallbackしません。
+Preferred contract **2.0.0** is Initial 12 / Update 4 with exact `次` / `更新` and one response per Phase. The four persisted results—evidence-only mechanical, AI-assumption scenario-derived, blind independent AI, and integrated selection—are different objects and never overwrite one another. The AI is frozen before machine or upstream ranks are disclosed. Runtime does not generate market analysis. Hard gates cannot be removed by AI, a relative winner is not necessarily investable, and `NO_SELECTION` is a formal result.
 
-runtimeが保証しないものは、sourceの真実性、市場データの完全性、将来performance、分析文章の投資妥当性です。evidenceの出典とas-ofを構造化し、推論には反対証拠を要求しますが、その内容自体の真偽は利用者と生成側が確認します。
+Candidate sets have separate identities for the ≤12 initial, ≤8 eligible, ≤5 deep, and ≤2/empty final sets. Multiple versioned horizons are first-class. Individual stock analysis receives a non-persuasive blind handoff first; reconciliation is released only after acknowledgement of independent analysis. This is not automated trading and has no broker, order, concrete entry-price, position-sizing, or stop-loss integration.
+
+Contract 1.0 Initial 10 / Update 2 endpoints remain a legacy completion/read path. They are not silently migrated. See [the audit](docs/current-state-audit.md), [2.0 architecture](docs/final-architecture-v2.md), and [migration rules](docs/current-state-audit.md).
 
 ## Safety mechanisms
 

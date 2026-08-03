@@ -1,0 +1,12 @@
+{
+  "expected_valid": true,
+  "contract_version": "2.0.0",
+  "mode": "pipeline",
+  "theme": "AI infrastructure",
+  "analysis_as_of": "2026-01-02T00:00:00Z",
+  "source_cutoff_at": "2026-01-01T00:00:00Z",
+  "candidates": [{"candidate_id":"US-XNAS-AAA-common","issuer_id":"issuer-AAA","issuer_name":"AAA","ticker":"AAA","exchange":"XNAS","share_class":"common","is_adr":false,"underlying_security_id":null,"former_tickers":[],"corporate_action_lineage":[],"listing_country":"US"}],
+  "horizons": [{"horizon_id":"medium","minimum_months":6,"maximum_months":18,"benchmark":"SPY","required_return":0.10}],
+  "blind_handoff": {},
+  "reconciliation_handoff": {"sealed_until_independent_ai_freeze": true}
+}

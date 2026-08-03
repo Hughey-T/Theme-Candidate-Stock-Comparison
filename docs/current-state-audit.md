@@ -1,0 +1,5 @@
+# Current-state audit (main at `8d623a0`)
+
+The implementation, packaged schemas, generated OpenAPI, tests, CI, Dockerfile and deployment guide were inspected rather than inferred from prior PR text. The baseline was contract 1.0: Initial 10 / Update 2, a 12→8→5→2 funnel, five mixed rankings, candidate-bound/global evidence, deterministic scenario arithmetic, hard gates, active/superseded typed handoffs, strict JSON, atomic state/publication, Bearer authentication and a Python 3.11–3.13 CI matrix. Its principal gap was architectural: the mechanical, assumption-derived and AI judgments were not protected by a blind disclosure boundary, horizons were prose, and individual-analysis intake was a single persuasive handoff.
+
+Contract 2.0 is therefore a new preferred protocol. Completed v1 generations and publications remain readable. In-progress v1 sessions finish on v1 or are explicitly replaced; they are never phase-renumbered or enriched with inferred historical AI ranks. Rollback selects the v1 image and existing v1 endpoint. Startup never silently converts state and never falls back from a corrupt latest file.

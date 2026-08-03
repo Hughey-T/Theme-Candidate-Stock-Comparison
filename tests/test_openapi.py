@@ -21,6 +21,14 @@ EXPECTED_OPERATION_IDS = {
     "submitComparisonPhase",
     "startComparisonUpdate",
     "getActiveComparisonHandoff",
+    "createBlindComparisonSessionV2",
+    "getBlindPhaseContractV2",
+    "submitBlindPhaseV2",
+    "startBlindComparisonUpdateV2",
+    "discloseMechanicalReconciliationV2",
+    "getBlindIndividualHandoffV2",
+    "acknowledgeBlindAnalysisV2",
+    "getReconciliationHandoffV2",
 }
 SESSION_OPERATIONS = {
     ("/v1/sessions/{session_id}", "get"),
@@ -48,7 +56,7 @@ def test_openapi_31_unique_operations_and_no_placeholder():
     assert DOC["openapi"] == "3.1.0"
     ids = [operation["operationId"] for _, _, operation in operations()]
     assert set(ids) == EXPECTED_OPERATION_IDS
-    assert len(ids) == len(set(ids)) == 7
+    assert len(ids) == len(set(ids)) == len(EXPECTED_OPERATION_IDS)
     assert all("YOUR_" not in server["url"] for server in DOC["servers"])
 
 
