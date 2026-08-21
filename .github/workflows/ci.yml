@@ -96,5 +96,6 @@ jobs:
           for path in ['/v2/sessions','/v2/sessions/{session_id}/phases','/v2/sessions/{session_id}/updates']:
               op=doc['paths'][path]['post']
               assert op['requestBody']['required'] is True
-              assert any(p.get('name')=='Idempotency-Key' and p.get('required') for p in op.get('parameters',[]))
+              assert any(p.get('name')=='idempotency_key' and p.get('in')=='query' and p.get('required') for p in op.get('parameters',[]))
+              assert not any(p.get('in')=='header' for p in op.get('parameters',[]))
           PY
