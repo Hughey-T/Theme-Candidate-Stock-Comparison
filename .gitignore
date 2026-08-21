@@ -10,4 +10,4 @@ dist/
 # Local production secrets and generated artifacts.
 .env
 runtime-logs/
-openapi/custom-gpt-action.v2.openapi.json
+openapi/
