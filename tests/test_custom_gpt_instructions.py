@@ -39,6 +39,17 @@ def test_custom_gpt_instructions_pin_v2_action_flow() -> None:
     assert "同じ `idempotency_key` で `recoverBlindComparisonSessionV2` を1回だけ呼ぶ" in text
 
 
+def test_custom_gpt_instructions_require_current_turn_action_evidence() -> None:
+    text = INSTRUCTION_FILES[0].read_text(encoding="utf-8")
+
+    assert "現在ターンに実際のAction tool call結果が存在しない限り" in text
+    assert "過去ターンや旧会話のAction失敗を現在ターンの結果として再利用" in text
+    assert "`createBlindComparisonSessionV2` を実際に呼ぶ" in text
+    assert "現在ターンで実行した `createBlindComparisonSessionV2` のtool result" in text
+    assert "Actionを実行できなかった" in text
+    assert "再送を求めず未実行であることを正確に報告" in text
+
+
 def test_custom_gpt_instructions_forbid_legacy_startup_contract() -> None:
     text = INSTRUCTION_FILES[0].read_text(encoding="utf-8")
 
