@@ -3,7 +3,7 @@ $ErrorActionPreference = "Stop"
 $publicUrl = [string]$env:THEME_COMPARE_PUBLIC_URL
 $publicUrl = $publicUrl.TrimEnd('/')
 if ([string]::IsNullOrWhiteSpace($publicUrl)) {
-    throw "THEME_COMPARE_PUBLIC_URL is required (for example https://theme-compare.your-domain.example)."
+    throw "THEME_COMPARE_PUBLIC_URL is required. Run .\deploy\setup-ngrok.ps1 or set a stable HTTPS endpoint explicitly."
 }
 if ($publicUrl -notmatch '^https://') {
     throw "THEME_COMPARE_PUBLIC_URL must use HTTPS."
@@ -99,5 +99,6 @@ if ($next.phase -ne 1 -or $next.generation_id -ne 'g1') {
 }
 
 Write-Host "READY: Theme Candidate Stock Comparison v2"
+Write-Host "Public URL: $publicUrl"
 Write-Host "Action OpenAPI: $actionPath"
 Write-Host "Schema SHA-256: $($health.schema_sha256)"
