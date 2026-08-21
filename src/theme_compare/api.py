@@ -243,7 +243,9 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
         idempotency_key: str = Header(..., alias="Idempotency-Key"),
     ) -> dict[str, Any]:
         payload = await body(request)
-        return idempotency.execute("v2:create", idempotency_key, payload, lambda: v2.create(payload))
+        return idempotency.execute(
+            "v2:create", idempotency_key, payload, lambda: v2.create(payload)
+        )
 
     @app.get(
         "/v2/sessions/{session_id}/next-contract",
@@ -265,7 +267,9 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
     ) -> dict[str, Any]:
         payload = await body(request)
         scope = f"v2:submit:{session_id}:{payload.get('generation_id')}:{payload.get('phase')}"
-        return idempotency.execute(scope, idempotency_key, payload, lambda: v2.submit(session_id, payload))
+        return idempotency.execute(
+            scope, idempotency_key, payload, lambda: v2.submit(session_id, payload)
+        )
 
     @app.post(
         "/v2/sessions/{session_id}/updates",
