@@ -4,10 +4,14 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
-from theme_compare.action_openapi import build_document
-from tools.generate_action_openapi import split_public_server_url
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+
+from generate_action_openapi import split_public_server_url  # noqa: E402
+from theme_compare.action_openapi import build_document  # noqa: E402
 
 DEFAULT_OUTPUT = Path("openapi/custom-gpt-action.diagnostic.openapi.json")
 TARGET_PATH = "/v2/sessions"
