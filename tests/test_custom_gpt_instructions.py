@@ -39,6 +39,16 @@ def test_custom_gpt_instructions_pin_v2_action_flow() -> None:
     assert "同じ `idempotency_key` で `recoverBlindComparisonSessionV2` を1回だけ呼ぶ" in text
 
 
+def test_custom_gpt_instructions_require_timezone_aware_rfc3339() -> None:
+    text = INSTRUCTION_FILES[0].read_text(encoding="utf-8")
+
+    assert "complete timezone-aware RFC 3339 instant" in text
+    assert "Never send a bare `YYYY-MM-DD` date" in text
+    assert "T00:00:00Z" in text
+    assert "source_cutoff_at <= analysis_as_of" in text
+    assert "Every evidence record `as_of`" in text
+
+
 def test_custom_gpt_instructions_require_current_turn_action_evidence() -> None:
     text = INSTRUCTION_FILES[0].read_text(encoding="utf-8")
 
