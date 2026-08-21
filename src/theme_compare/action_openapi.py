@@ -73,8 +73,7 @@ def normalize_action_schema(
 
     if isinstance(value, list):
         return [
-            normalize_action_schema(item, def_component_names=def_component_names)
-            for item in value
+            normalize_action_schema(item, def_component_names=def_component_names) for item in value
         ]
     return value
 
