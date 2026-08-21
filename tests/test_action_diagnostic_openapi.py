@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 GENERATOR = ROOT / "tools" / "generate_action_diagnostic_openapi.py"
 
 
-def test_diagnostic_openapi_exposes_only_create_action(tmp_path: Path) -> None:
+def test_diagnostic_openapi_exposes_only_health_probe(tmp_path: Path) -> None:
     output = tmp_path / "diagnostic.json"
     subprocess.run(
         [
@@ -26,10 +26,11 @@ def test_diagnostic_openapi_exposes_only_create_action(tmp_path: Path) -> None:
     )
     document = json.loads(output.read_text(encoding="utf-8"))
 
-    assert set(document["paths"]) == {"/v2/sessions"}
-    operation = document["paths"]["/v2/sessions"]["post"]
-    assert operation["operationId"] == "createBlindComparisonSessionV2"
+    assert set(document["paths"]) == {"/health"}
+    operation = document["paths"]["/health"]["get"]
+    assert operation["operationId"] == "runDiagnosticProbe"
     assert document["servers"] == [{"url": "https://theme.example.co.jp/theme-compare"}]
-    assert operation["parameters"][0]["name"] == "idempotency_key"
-    assert operation["parameters"][0]["in"] == "query"
-    assert operation["parameters"][0]["required"] is True
+    assert document["security"] == []
+    assert operation["security"] == []
+    assert "RUN" in operation["summary"]
+    assert "Do not ask what to run" in operation["description"]
