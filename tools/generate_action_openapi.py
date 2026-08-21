@@ -1,6 +1,16 @@
 """CLI compatibility wrapper for the canonical Action OpenAPI generator."""
 
-from theme_compare.action_openapi import main
+from __future__ import annotations
+
+import importlib
+import sys
+from pathlib import Path
+
+
+def main() -> None:
+    sys.path.insert(0, str(Path(__file__).parents[1] / "src"))
+    module = importlib.import_module("theme_compare.action_openapi")
+    module.main()
 
 
 if __name__ == "__main__":
