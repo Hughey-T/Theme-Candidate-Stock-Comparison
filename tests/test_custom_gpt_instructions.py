@@ -6,6 +6,7 @@ INSTRUCTION_FILES = [
     ROOT / "docs" / "custom-gpt-instructions.md",
     ROOT / "docs" / "custom-gpt-production-instructions.md",
 ]
+MAX_GPT_INSTRUCTIONS_CHARACTERS = 8000
 
 REQUIRED_V2_OPERATIONS = {
     "getRuntimeHealth",
@@ -21,9 +22,10 @@ REQUIRED_V2_OPERATIONS = {
 }
 
 
-def test_custom_gpt_instruction_files_are_identical() -> None:
+def test_custom_gpt_instruction_files_are_identical_and_fit_builder_limit() -> None:
     contents = [path.read_text(encoding="utf-8") for path in INSTRUCTION_FILES]
     assert contents[0] == contents[1]
+    assert len(contents[0]) <= MAX_GPT_INSTRUCTIONS_CHARACTERS
 
 
 def test_custom_gpt_instructions_pin_v2_action_flow() -> None:
