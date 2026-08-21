@@ -48,6 +48,24 @@ class IdempotencyStore:
         identity = hashlib.sha256(f"{scope}\0{key}".encode()).hexdigest()
         return self.root / f"{identity}.json"
 
+    def read_result(self, scope: str, key: str) -> dict[str, Any] | None:
+        """Return a completed idempotent result without replaying the mutation."""
+        key = self._validate_key(key)
+        self._ensure_root()
+        path = self._record_path(scope, key)
+        if not path.is_file():
+            return None
+        try:
+            record = strict_json_loads(path.read_bytes())
+        except OSError as exc:
+            raise StorageError("idempotency storage failure") from exc
+        if not isinstance(record, dict):
+            raise StorageError("invalid idempotency record")
+        result = record.get("result")
+        if not isinstance(result, dict):
+            raise StorageError("invalid idempotency result")
+        return cast(dict[str, Any], result)
+
     def execute(
         self,
         scope: str,
