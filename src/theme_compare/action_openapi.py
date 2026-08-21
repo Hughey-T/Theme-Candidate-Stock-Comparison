@@ -156,10 +156,13 @@ def session_parameter() -> dict[str, object]:
 
 def idempotency_parameter() -> dict[str, object]:
     return {
-        "name": "Idempotency-Key",
-        "in": "header",
+        "name": "idempotency_key",
+        "in": "query",
         "required": True,
-        "description": "Stable unique key for safe retry of this logical POST operation.",
+        "description": (
+            "Stable unique token for safe retry of this logical POST operation. "
+            "Reuse it only when retrying the exact same logical request."
+        ),
         "schema": {"type": "string", "minLength": 8, "maxLength": 200},
     }
 
