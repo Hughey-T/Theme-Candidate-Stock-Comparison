@@ -16,7 +16,8 @@ jobs:
             'deploy/setup-ngrok.ps1',
             'deploy/verify-production.ps1',
             'deploy/finalize-production.ps1',
-            'deploy/copy-custom-gpt-instructions.ps1'
+            'deploy/copy-custom-gpt-instructions.ps1',
+            'deploy/diagnose-live-action.ps1'
           )
           foreach ($file in $files) {
             $errors = $null
