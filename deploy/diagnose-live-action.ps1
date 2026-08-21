@@ -6,7 +6,8 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+$dockerCommand = Get-Command docker -ErrorAction SilentlyContinue
+if (-not $dockerCommand) {
     throw 'docker command was not found.'
 }
 
@@ -27,7 +28,24 @@ try {
             Write-Host 'Runtime build matches Git HEAD.'
         }
         else {
-            Write-Warning 'Runtime build does not match Git HEAD. Production runtime may not include the latest Action compatibility changes.'
+            $changedFiles = @(& git diff --name-only ([string]$health.build_id + '..HEAD') 2>$null)
+            if ($LASTEXITCODE -eq 0 -and $changedFiles.Count -gt 0) {
+                $runtimeChanges = @(
+                    $changedFiles | Where-Object {
+                        $_ -match '^(src/|Dockerfile$|pyproject\.toml$|constraints.*\.txt$)'
+                    }
+                )
+                if ($runtimeChanges.Count -eq 0) {
+                    Write-Host 'Runtime build predates Git HEAD only by non-runtime files; runtime code is current.'
+                }
+                else {
+                    Write-Warning 'Runtime build does not include all current runtime-code changes.'
+                    Write-Host ('Runtime-impacting files since build: ' + ($runtimeChanges -join ', '))
+                }
+            }
+            else {
+                Write-Warning 'Runtime build differs from Git HEAD and the code-impact could not be classified.'
+            }
         }
     }
 }
@@ -35,9 +53,32 @@ catch {
     Write-Warning ('Could not read local runtime health: ' + $_.Exception.Message)
 }
 
-$raw = & docker logs $ContainerName --since $Since --timestamps 2>&1
-if ($LASTEXITCODE -ne 0) {
-    throw "Could not read logs from container: $ContainerName"
+$tempStdout = [System.IO.Path]::GetTempFileName()
+$tempStderr = [System.IO.Path]::GetTempFileName()
+try {
+    $process = Start-Process `
+        -FilePath $dockerCommand.Source `
+        -ArgumentList @('logs', $ContainerName, '--since', $Since, '--timestamps') `
+        -NoNewWindow `
+        -Wait `
+        -PassThru `
+        -RedirectStandardOutput $tempStdout `
+        -RedirectStandardError $tempStderr
+
+    if ($process.ExitCode -ne 0) {
+        throw "Could not read logs from container: $ContainerName (docker exit $($process.ExitCode))"
+    }
+
+    $raw = @()
+    if ((Get-Item $tempStdout).Length -gt 0) {
+        $raw += [System.IO.File]::ReadAllLines($tempStdout)
+    }
+    if ((Get-Item $tempStderr).Length -gt 0) {
+        $raw += [System.IO.File]::ReadAllLines($tempStderr)
+    }
+}
+finally {
+    Remove-Item $tempStdout, $tempStderr -Force -ErrorAction SilentlyContinue
 }
 
 $entries = @()
@@ -66,7 +107,7 @@ if ($entries.Count -eq 0) {
     exit 2
 }
 
-$recent = @($entries | Select-Object -Last 10)
+$recent = @($entries | Sort-Object Timestamp | Select-Object -Last 10)
 Write-Host '=== Recent POST /v2/sessions entries ==='
 foreach ($entry in $recent) {
     Write-Host ('  ' + $entry.Timestamp + '  HTTP ' + $entry.Status)
