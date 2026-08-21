@@ -17,9 +17,7 @@ from pathlib import Path
 from urllib.parse import urlparse, urlunparse
 
 _SAFE_PREFIX = re.compile(r"^/[a-z0-9][a-z0-9-]*(?:/[a-z0-9][a-z0-9-]*)*$")
-_RFC3339_INSTANT_PATTERN = (
-    r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
-)
+_RFC3339_INSTANT_PATTERN = r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$"
 _RFC3339_INSTANT_DESCRIPTION = (
     "RFC 3339 instant with an explicit timezone suffix (Z or ±HH:MM). "
     "Bare calendar dates such as 2026-08-22 are invalid."
