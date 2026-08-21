@@ -2,13 +2,26 @@
 
 ## Supported production topology
 
-Default production ingress is:
+Default production ingress uses the shared **Local AI Gateway** managed by the AI Development Orchestrator repository:
 
-`Custom GPT Action -> fixed ngrok Development Domain -> ngrok agent -> 127.0.0.1:8000 -> Docker container -> named volume`
+```text
+Custom GPT Action
+  -> fixed ngrok Development Domain
+  -> ngrok agent
+  -> 127.0.0.1:8080
+  -> Caddy Local AI Gateway
+  -> /theme-compare/*
+  -> theme-compare:8000
+  -> persistent theme-compare-data volume
+```
 
-Cloudflare Named Tunnel remains a supported alternative when an independent domain/DNS setup is preferred. Do **not** use Quick Tunnel / `trycloudflare.com` for production. The Action server hostname must remain stable across container, tunnel-agent, and machine restarts.
+The same public domain root `/` continues to route to AI Development Orchestrator. Theme Comparison therefore consumes a stable public base path such as:
 
-ngrok Free accounts include one account-assigned Development Domain. Current ngrok-branded development domains may use `ngrok-free.app` or `ngrok-free.dev`. If that single Development Domain is already used by another local service, do not repoint or share it implicitly: Theme Comparison needs a separate stable ingress (for example an additional paid ngrok-branded domain or an independent stable ingress such as a Cloudflare Named Tunnel). The bootstrap script refuses to reuse an ngrok tunnel unless its upstream is actually port 8000.
+`https://<assigned-domain>.ngrok-free.dev/theme-compare`
+
+Theme Comparison does **not** own a second ngrok process or Development Domain. This avoids Free-plan domain collisions and gives future local systems another unique top-level path on the same gateway.
+
+Cloudflare Named Tunnel remains a supported alternative when an independent domain/DNS setup is preferred. Do **not** use Quick Tunnel / `trycloudflare.com` for production.
 
 ## Runtime startup
 
@@ -41,6 +54,7 @@ The updater is intentionally conservative. It:
 - builds a timestamped candidate image before stopping the old container
 - tags the old image and renames the old container with timestamped rollback names instead of deleting them
 - starts the replacement with the same mounts and environment
+- preserves membership in the shared `local-ai-gateway` Docker network when it is already present, restoring alias `theme-compare` on the replacement
 - requires the new `/health` response to report `service=ok`, `storage=ok`, `ready=true`, contract `2.0.0`, profile `custom-gpt-v2`, and a schema fingerprint
 - automatically attempts to restore the old container if replacement startup or health validation fails
 - never performs `docker volume rm`, volume prune, or system prune
@@ -51,60 +65,51 @@ On success it prints:
 
 The stopped rollback container/image are intentionally retained after a successful update. Remove old rollback artifacts only as a separate deliberate maintenance operation after confirming the new runtime and persisted state; never remove the persistent data volume.
 
-## Default ingress: ngrok Development Domain
+## Shared Local AI Gateway
 
-On Windows, after the runtime is healthy on `http://127.0.0.1:8000`, run:
+The Gateway is bootstrapped from the AI Development Orchestrator repository after both application containers are healthy:
+
+```powershell
+.\deploy\setup-gateway.ps1
+```
+
+That bootstrap creates/reuses the external Docker network `local-ai-gateway`, connects this container with alias `theme-compare`, starts pinned Caddy on `127.0.0.1:8080`, and verifies:
+
+```text
+http://127.0.0.1:8080/health                -> Orchestrator
+http://127.0.0.1:8080/theme-compare/health  -> Theme Comparison v2
+```
+
+Only after those local checks pass should the single central ngrok Development Domain be pointed at port `8080`.
+
+The gateway strips `/theme-compare` before forwarding, so this runtime itself remains unaware of the public prefix and continues serving `/health` and `/v2/*` internally.
+
+## Theme public-ingress setup
+
+After the central ngrok tunnel points to the Gateway on `127.0.0.1:8080`, run:
 
 ```powershell
 .\deploy\setup-ngrok.ps1
 ```
 
-The bootstrap script:
+Despite the historical filename, this script no longer starts a Theme-specific ngrok tunnel. It:
 
-- discovers the existing `ngrok` executable on PATH
-- validates the existing ngrok config/authentication
-- refuses to proceed unless the local runtime is ready
-- reuses an existing ngrok HTTPS endpoint **only when its upstream is port 8000**
-- refuses to hijack or reinterpret a tunnel that belongs to another local service
-- starts `ngrok http 8000` only when no other HTTPS ngrok endpoint is already active in the local agent
-- accepts current ngrok development-domain suffixes including `ngrok-free.app` and `ngrok-free.dev`
-- discovers the public HTTPS URL from the local ngrok API
-- saves `THEME_COMPARE_PUBLIC_URL` as a user environment variable
-- verifies the full v2 production `/health` fingerprint through the public endpoint
+- verifies the local Theme runtime on `127.0.0.1:8000`
+- verifies the local Gateway route at `/theme-compare/health`
+- discovers the existing ngrok HTTPS endpoint from the local ngrok API
+- accepts it only when its upstream is the central Gateway port `8080`
+- constructs `https://<fixed-domain>/theme-compare`
+- saves that value as `THEME_COMPARE_PUBLIC_URL`
+- removes obsolete Theme-specific ngrok Startup shortcut/launcher entries if present
+- verifies the full v2 health fingerprint through the public Gateway route
 
-It does not read, print, copy, or commit an ngrok authtoken. If the machine has never been authenticated, ngrok itself must first be configured with `ngrok config add-authtoken <YOUR_AUTHTOKEN>`.
+`-InstallStartupTask` is retained only for backwards compatibility. It does not create another Theme-specific startup entry because central ngrok lifecycle belongs to the Gateway.
 
-To configure automatic ngrok startup after Windows sign-in, use:
+The script does not read, print, copy, or commit an ngrok authtoken.
 
-```powershell
-.\deploy\setup-ngrok.ps1 -InstallStartupTask
-```
+## Generate the supported Custom GPT Action schema
 
-For compatibility the switch retains its historical name, but the implementation uses a hidden launcher shortcut in the current user's Startup folder and does not require administrator elevation. The launcher only treats an HTTPS tunnel whose upstream is port 8000 as Theme Comparison; if another HTTPS tunnel is already active, it exits instead of attempting to steal the other service's endpoint.
-
-The Docker runtime already uses `--restart unless-stopped`; Docker Desktop itself must be configured to start with Windows for full automatic recovery after a reboot.
-
-The ngrok endpoint is an ingress only. Runtime authentication still requires the Theme Comparison Bearer API key, so exposing the endpoint does not bypass API authentication.
-
-### When the ngrok Free Development Domain is already occupied
-
-A Free account has one Development Domain. If `http://127.0.0.1:4040/api/tunnels` shows that domain pointing to another local service (for example an orchestrator on port 8787), keep that endpoint unchanged. Theme Comparison then requires one of these separate stable ingress choices:
-
-- an additional ngrok-branded domain on a plan that supports it, explicitly mapped to `http://127.0.0.1:8000`
-- a Cloudflare Named Tunnel on a stable hostname you control
-- another stable HTTPS reverse proxy whose hostname does not change across restarts
-
-Do not use a random/ephemeral URL for the Custom GPT Action, and do not repoint an existing service's stable endpoint just to make Theme Comparison pass verification.
-
-## Alternative ingress: Cloudflare Named Tunnel
-
-A remotely managed / named Cloudflare Tunnel may instead map a DNS hostname you control, for example `theme-compare.your-domain.tld`, to `http://127.0.0.1:8000`. Keep tunnel token/credentials outside the repository and configure cloudflared to restart automatically. Do not bake tunnel credentials into the image.
-
-The runtime does not depend on ngrok- or Cloudflare-specific request headers; any stable HTTPS reverse proxy may be used.
-
-## Generate the only supported Custom GPT Action schema
-
-There is one generator for the v2-only Action contract. With ngrok, `THEME_COMPARE_PUBLIC_URL` is populated by `setup-ngrok.ps1`:
+Use the canonical generator with the prefixed public base:
 
 ```powershell
 python .\tools\generate_action_openapi.py `
@@ -112,36 +117,34 @@ python .\tools\generate_action_openapi.py `
   --output .\openapi\custom-gpt-action.v2.openapi.json
 ```
 
-Equivalent shell usage:
+Example:
 
 ```bash
 python tools/generate_action_openapi.py \
-  --server-url https://your-assigned-domain.ngrok-free.dev \
+  --server-url https://your-assigned-domain.ngrok-free.dev/theme-compare \
   --output openapi/custom-gpt-action.v2.openapi.json
 ```
 
-The generator rejects HTTP, `trycloudflare.com`, common example domains, `.invalid`, and origins containing a path/query/fragment. It emits only `/v2/*` plus `/health`; legacy `/v1/*` operations are intentionally excluded from the GPT Action contract.
+The generator accepts a stable lowercase slug path prefix such as `/theme-compare`, places it in OpenAPI `servers.url`, and leaves the canonical operation paths as `/health` and `/v2/*`. It rejects HTTP, `trycloudflare.com`, placeholder domains, query/fragment values, and unsafe path forms.
 
 Import `openapi/custom-gpt-action.v2.openapi.json` in GPT editor -> Configure -> Actions, then configure API Key authentication as Bearer using `THEME_COMPARE_API_KEY`. Do not manually edit or paste-rewrite the generated JSON.
 
 ## One-command production verification (Windows)
 
-After a stable ingress is configured, set only the runtime API key in the current shell and run:
+After the shared public ingress is configured, set only the runtime API key in the current shell and run:
 
 ```powershell
 $env:THEME_COMPARE_API_KEY = '<secret>'
 .\deploy\verify-production.ps1
 ```
 
-For another stable HTTPS provider, set `THEME_COMPARE_PUBLIC_URL` explicitly before running the verifier.
-
 The verifier checks:
 
-- public health/readiness
+- public health/readiness through `/theme-compare`
 - contract version and API profile
 - schema fingerprint presence
 - unauthenticated `401`
-- deterministic v2-only Action generation
+- deterministic v2-only Action generation with the prefixed server base
 - authenticated v2 test-session creation
 - idempotent replay returning the same session
 - next-contract readback at Initial Phase 1
@@ -165,6 +168,22 @@ A GPT/runtime deployment mismatch should therefore be detectable before creating
 ## Idempotent POSTs
 
 The v2 Action requires `Idempotency-Key` for session creation, phase submission, and update start. Repeating the same logical request with the same key and payload returns the persisted first result. Reusing a key with different payload is rejected. Records live under the same persistent storage root and survive runtime restarts.
+
+## Adding future local systems
+
+Do not modify this repository for unrelated services. Add future routes in the Gateway repository's `gateway/services.json`, connect the future container to `local-ai-gateway` with a unique alias, regenerate the Caddy config, and verify the new prefix locally before exposing it publicly.
+
+The shared conventions are:
+
+- `/` is reserved for AI Development Orchestrator
+- `/__gateway/*` is reserved for Gateway health/administration
+- `/theme-compare/*` belongs to this runtime
+- every future service receives another unique lowercase top-level slug
+- reverse-proxy routing never replaces each backend's own authentication
+
+## Alternative ingress: Cloudflare Named Tunnel
+
+A named Cloudflare Tunnel may instead map a stable hostname you control directly to this runtime or to the shared Gateway. Keep tunnel token/credentials outside the repository and configure cloudflared to restart automatically. Do not bake tunnel credentials into the image.
 
 ## Operations
 
@@ -192,7 +211,7 @@ Docker run -d --name theme-compare --restart unless-stopped --env-file .env `
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
 
-For subsequent code updates, run `deploy/update-production.ps1` instead of manually stopping/removing/recreating the production container.
+Then use the shared Gateway bootstrap. For subsequent code updates, run `deploy/update-production.ps1` instead of manually stopping/removing/recreating the production container.
 
 ## Contract 2.0 rollout and rollback
 
