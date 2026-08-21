@@ -67,6 +67,27 @@ def test_ngrok_script_uses_permissionless_current_user_startup() -> None:
     assert "schtasks.exe" not in text
 
 
+def test_ngrok_script_only_reuses_port_8000_tunnel() -> None:
+    text = NGROK_SCRIPT.read_text(encoding="utf-8")
+
+    required = [
+        "Get-NgrokTunnelUrlForPort",
+        "[string]$_.config.addr -match $targetPattern",
+        "-Port 8000",
+        "Do not reuse another service's endpoint",
+        "account development domain may already be occupied",
+    ]
+    for marker in required:
+        assert marker in text
+
+
+def test_ngrok_startup_launcher_does_not_steal_other_service_endpoint() -> None:
+    text = NGROK_SCRIPT.read_text(encoding="utf-8")
+
+    assert "[string]`$_.config.addr -match '^https?://(127\\.0\\.0\\.1|localhost):8000/?$'" in text
+    assert "exit 2" in text
+
+
 def test_ngrok_public_health_requires_v2_fingerprint() -> None:
     text = NGROK_SCRIPT.read_text(encoding="utf-8")
 
