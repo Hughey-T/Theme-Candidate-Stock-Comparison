@@ -1,5 +1,7 @@
 param(
-    [switch]$InstallStartupTask
+    [switch]$InstallStartupTask,
+    [int]$GatewayPort = 8080,
+    [string]$ServicePrefix = '/theme-compare'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -11,7 +13,6 @@ function Get-NgrokTunnels {
     catch {
         return @()
     }
-
     if ($null -eq $response.tunnels) {
         return @()
     }
@@ -38,64 +39,27 @@ function Get-NgrokTunnelUrlForPort {
     return [string]$httpsTunnel.public_url
 }
 
-function Install-NgrokStartupShortcut {
-    param(
-        [Parameter(Mandatory = $true)][string]$NgrokPath
-    )
-
-    $appDir = Join-Path $env:LOCALAPPDATA 'ThemeCandidateStockComparison'
-    New-Item -ItemType Directory -Path $appDir -Force | Out-Null
-
-    $launcherPath = Join-Path $appDir 'start-ngrok.ps1'
-    $stdoutPath = Join-Path $appDir 'ngrok.stdout.log'
-    $stderrPath = Join-Path $appDir 'ngrok.stderr.log'
-
-    $ngrokLiteral = $NgrokPath.Replace("'", "''")
-    $stdoutLiteral = $stdoutPath.Replace("'", "''")
-    $stderrLiteral = $stderrPath.Replace("'", "''")
-    $launcher = @"
-`$ErrorActionPreference = 'SilentlyContinue'
-try {
-    `$response = Invoke-RestMethod -Uri 'http://127.0.0.1:4040/api/tunnels' -TimeoutSec 2
-    `$existing = `$response.tunnels | Where-Object {
-        `$_.public_url -match '^https://' -and
-        [string]`$_.config.addr -match '^https?://(127\.0\.0\.1|localhost):8000/?$'
-    } | Select-Object -First 1
-    if (`$null -ne `$existing) {
-        exit 0
-    }
-    if (`$null -ne (`$response.tunnels | Where-Object { `$_.public_url -match '^https://' } | Select-Object -First 1)) {
-        exit 2
-    }
-}
-catch {
-}
-Start-Process -FilePath '$ngrokLiteral' -ArgumentList @('http', '8000') -WindowStyle Hidden -RedirectStandardOutput '$stdoutLiteral' -RedirectStandardError '$stderrLiteral' | Out-Null
-"@
-    Set-Content -LiteralPath $launcherPath -Value $launcher -Encoding UTF8
-
+function Remove-LegacyThemeNgrokStartup {
     $startupDir = [Environment]::GetFolderPath('Startup')
-    if ([string]::IsNullOrWhiteSpace($startupDir)) {
-        throw 'Windows Startup folder could not be resolved.'
+    if (-not [string]::IsNullOrWhiteSpace($startupDir)) {
+        $shortcutPath = Join-Path $startupDir 'ThemeCandidateStockComparison-ngrok.lnk'
+        if (Test-Path $shortcutPath) {
+            Remove-Item $shortcutPath -Force
+            Write-Host "Removed legacy Theme-specific startup shortcut: $shortcutPath"
+        }
     }
 
-    $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
-    $shortcutPath = Join-Path $startupDir 'ThemeCandidateStockComparison-ngrok.lnk'
-    $shell = New-Object -ComObject WScript.Shell
-    $shortcut = $shell.CreateShortcut($shortcutPath)
-    $shortcut.TargetPath = $powershell
-    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launcherPath`""
-    $shortcut.WorkingDirectory = $appDir
-    $shortcut.WindowStyle = 7
-    $shortcut.Save()
-
-    Write-Host "Startup shortcut installed: $shortcutPath"
+    $launcherPath = Join-Path $env:LOCALAPPDATA 'ThemeCandidateStockComparison\start-ngrok.ps1'
+    if (Test-Path $launcherPath) {
+        Remove-Item $launcherPath -Force
+        Write-Host "Removed legacy Theme-specific ngrok launcher: $launcherPath"
+    }
 }
 
 Write-Host '=== 1. Detect ngrok ==='
 $ngrok = Get-Command ngrok -ErrorAction SilentlyContinue
 if ($null -eq $ngrok) {
-    throw 'ngrok was not found on PATH. Install ngrok, then run this script again.'
+    throw 'ngrok was not found on PATH. The shared Local AI Gateway ingress requires the existing ngrok agent.'
 }
 Write-Host "ngrok: $($ngrok.Source)"
 & $ngrok.Source version
@@ -103,75 +67,69 @@ if ($LASTEXITCODE -ne 0) {
     throw 'ngrok version check failed.'
 }
 
-Write-Host '=== 2. Validate ngrok authentication/config ==='
-& $ngrok.Source config check
-if ($LASTEXITCODE -ne 0) {
-    throw 'ngrok config is not valid. If this machine is not authenticated, run: ngrok config add-authtoken <YOUR_AUTHTOKEN>'
-}
-
-Write-Host '=== 3. Validate local runtime ==='
+Write-Host '=== 2. Validate local Theme runtime ==='
 $localHealth = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/health' -TimeoutSec 5
-if ($localHealth.service -ne 'ok' -or $localHealth.storage -ne 'ok' -or -not $localHealth.ready) {
+if (
+    $localHealth.service -ne 'ok' -or
+    $localHealth.storage -ne 'ok' -or
+    -not $localHealth.ready -or
+    $localHealth.contract_version -ne '2.0.0' -or
+    $localHealth.api_profile -ne 'custom-gpt-v2'
+) {
     throw 'Theme Candidate Stock Comparison is not ready on http://127.0.0.1:8000.'
 }
 
-Write-Host '=== 4. Start or reuse ngrok endpoint ==='
+Write-Host '=== 3. Validate shared Local AI Gateway ==='
+$gatewayBase = "http://127.0.0.1:$GatewayPort"
+$gatewayHealth = Invoke-RestMethod -Uri "$gatewayBase$ServicePrefix/health" -TimeoutSec 5
+if (
+    $gatewayHealth.service -ne 'ok' -or
+    $gatewayHealth.storage -ne 'ok' -or
+    -not $gatewayHealth.ready -or
+    $gatewayHealth.contract_version -ne '2.0.0' -or
+    $gatewayHealth.api_profile -ne 'custom-gpt-v2'
+) {
+    throw "Local AI Gateway does not route $ServicePrefix to the Theme Comparison v2 runtime. Run the gateway bootstrap first."
+}
+
+Write-Host '=== 4. Detect central ngrok ingress ==='
 $tunnels = Get-NgrokTunnels
-$publicUrl = Get-NgrokTunnelUrlForPort -Tunnels $tunnels -Port 8000
-
-if ([string]::IsNullOrWhiteSpace($publicUrl)) {
-    $otherHttps = $tunnels | Where-Object { $_.public_url -match '^https://' }
-    if ($otherHttps.Count -gt 0) {
-        $summary = ($otherHttps | ForEach-Object { "$($_.public_url) -> $($_.config.addr)" }) -join '; '
-        throw "No ngrok HTTPS tunnel points to Theme Comparison on port 8000. Existing endpoint(s): $summary. Do not reuse another service's endpoint. On ngrok Free, the account development domain may already be occupied; use a separate stable domain/paid ngrok domain or another stable ingress."
+$publicOrigin = Get-NgrokTunnelUrlForPort -Tunnels $tunnels -Port $GatewayPort
+if ([string]::IsNullOrWhiteSpace($publicOrigin)) {
+    $summary = ($tunnels | Where-Object { $_.public_url -match '^https://' } | ForEach-Object {
+        "$($_.public_url) -> $($_.config.addr)"
+    }) -join '; '
+    if ([string]::IsNullOrWhiteSpace($summary)) {
+        $summary = 'none'
     }
-
-    $logDir = Join-Path $env:LOCALAPPDATA 'ThemeCandidateStockComparison'
-    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
-    $stdoutPath = Join-Path $logDir 'ngrok.stdout.log'
-    $stderrPath = Join-Path $logDir 'ngrok.stderr.log'
-
-    Start-Process -FilePath $ngrok.Source `
-        -ArgumentList @('http', '8000') `
-        -WindowStyle Hidden `
-        -RedirectStandardOutput $stdoutPath `
-        -RedirectStandardError $stderrPath | Out-Null
-
-    for ($i = 0; $i -lt 30; $i++) {
-        Start-Sleep -Seconds 1
-        $tunnels = Get-NgrokTunnels
-        $publicUrl = Get-NgrokTunnelUrlForPort -Tunnels $tunnels -Port 8000
-        if (-not [string]::IsNullOrWhiteSpace($publicUrl)) {
-            break
-        }
-    }
+    throw "No central ngrok HTTPS tunnel points to the Local AI Gateway on port $GatewayPort. Existing endpoint(s): $summary. The gateway repository owns ngrok startup; do not start a Theme-specific tunnel."
 }
 
-if ([string]::IsNullOrWhiteSpace($publicUrl)) {
-    throw 'ngrok did not expose a public HTTPS endpoint for http://127.0.0.1:8000. Check ngrok account limits and logs under %LOCALAPPDATA%\ThemeCandidateStockComparison.'
+$publicOrigin = $publicOrigin.TrimEnd('/')
+if ($publicOrigin -notmatch '^https://') {
+    throw "ngrok endpoint is not HTTPS: $publicOrigin"
 }
-$publicUrl = $publicUrl.TrimEnd('/')
-if ($publicUrl -notmatch '^https://') {
-    throw "ngrok endpoint is not HTTPS: $publicUrl"
+if ($publicOrigin -match 'trycloudflare\.com|example\.(com|org|net)|\.invalid') {
+    throw "Refusing ephemeral or placeholder endpoint: $publicOrigin"
 }
-if ($publicUrl -match 'trycloudflare\.com|example\.(com|org|net)|\.invalid') {
-    throw "Refusing ephemeral or placeholder endpoint: $publicUrl"
-}
-if ($publicUrl -notmatch '\.ngrok(-free)?\.(app|dev)$') {
-    Write-Warning "Endpoint is not an ngrok-branded development domain: $publicUrl. Verify that it is intentionally stable before importing it into Custom GPT."
+if ($publicOrigin -notmatch '\.ngrok(-free)?\.(app|dev)$') {
+    Write-Warning "Endpoint is not an ngrok-branded development domain: $publicOrigin. Verify that it is intentionally stable before importing it into Custom GPT."
 }
 
+$servicePrefixNormalized = '/' + $ServicePrefix.Trim('/')
+$publicUrl = "$publicOrigin$servicePrefixNormalized"
 $env:THEME_COMPARE_PUBLIC_URL = $publicUrl
 [Environment]::SetEnvironmentVariable('THEME_COMPARE_PUBLIC_URL', $publicUrl, 'User')
 Write-Host "Public URL: $publicUrl"
 Write-Host 'Saved THEME_COMPARE_PUBLIC_URL as a user environment variable.'
 
+Write-Host '=== 5. Remove obsolete Theme-specific ngrok startup ==='
+Remove-LegacyThemeNgrokStartup
 if ($InstallStartupTask) {
-    Write-Host '=== 5. Install current-user startup ==='
-    Install-NgrokStartupShortcut -NgrokPath $ngrok.Source
+    Write-Warning '-InstallStartupTask is retained only for backward compatibility. ngrok startup is now owned by the shared Local AI Gateway and no Theme-specific startup entry is created.'
 }
 
-Write-Host '=== 6. Verify public health ==='
+Write-Host '=== 6. Verify public Theme route ==='
 $publicHealth = Invoke-RestMethod -Uri "$publicUrl/health" -TimeoutSec 15
 if (
     $publicHealth.service -ne 'ok' -or
@@ -181,7 +139,7 @@ if (
     $publicHealth.api_profile -ne 'custom-gpt-v2' -or
     [string]::IsNullOrWhiteSpace([string]$publicHealth.schema_sha256)
 ) {
-    throw 'Public ngrok endpoint reached the runtime, but the runtime does not satisfy the v2 production health contract.'
+    throw 'Public gateway route reached a runtime, but it does not satisfy the Theme Comparison v2 production health contract.'
 }
 
 Write-Host 'NGROK READY'
