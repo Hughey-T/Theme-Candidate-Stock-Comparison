@@ -8,7 +8,7 @@ Default production ingress is:
 
 Cloudflare Named Tunnel remains a supported alternative when an independent domain/DNS setup is preferred. Do **not** use Quick Tunnel / `trycloudflare.com` for production. The Action server hostname must remain stable across container, tunnel-agent, and machine restarts.
 
-ngrok Free accounts include an account-assigned Development Domain whose URL remains fixed across agent restarts. This is sufficient for the personal Custom GPT integration as long as account limits are acceptable.
+ngrok Free accounts include an account-assigned Development Domain whose URL remains fixed across agent restarts. Current ngrok-branded development domains may use `ngrok-free.app` or `ngrok-free.dev`. This is sufficient for the personal Custom GPT integration as long as account limits are acceptable.
 
 ## Runtime startup
 
@@ -65,17 +65,20 @@ The bootstrap script:
 - validates the existing ngrok config/authentication
 - refuses to proceed unless the local runtime is ready
 - reuses an already-running ngrok HTTPS endpoint or starts `ngrok http 8000`
+- accepts current ngrok development-domain suffixes including `ngrok-free.app` and `ngrok-free.dev`
 - discovers the public HTTPS URL from the local ngrok API
 - saves `THEME_COMPARE_PUBLIC_URL` as a user environment variable
-- verifies `/health` through the public endpoint
+- verifies the full v2 production `/health` fingerprint through the public endpoint
 
 It does not read, print, copy, or commit an ngrok authtoken. If the machine has never been authenticated, ngrok itself must first be configured with `ngrok config add-authtoken <YOUR_AUTHTOKEN>`.
 
-To install a current-user logon task that starts ngrok after Windows sign-in:
+To configure automatic ngrok startup after Windows sign-in:
 
 ```powershell
 .\deploy\setup-ngrok.ps1 -InstallStartupTask
 ```
+
+The script first attempts a current-user Task Scheduler registration. If local Windows policy rejects that registration, it falls back to a hidden launcher shortcut in the current user's Startup folder, which does not require administrator elevation. Failure to use Task Scheduler therefore does not block public health verification.
 
 The Docker runtime already uses `--restart unless-stopped`; Docker Desktop itself must be configured to start with Windows for full automatic recovery after a reboot.
 
@@ -101,7 +104,7 @@ Equivalent shell usage:
 
 ```bash
 python tools/generate_action_openapi.py \
-  --server-url https://your-assigned-domain.ngrok-free.app \
+  --server-url https://your-assigned-domain.ngrok-free.dev \
   --output openapi/custom-gpt-action.v2.openapi.json
 ```
 
@@ -180,7 +183,7 @@ Invoke-RestMethod http://127.0.0.1:8000/health
 
 For subsequent code updates, run `deploy/update-production.ps1` instead of manually stopping/removing/recreating the production container.
 
-If the startup task cannot be installed because of local Windows policy, the only remaining manual operation is starting `ngrok http 8000` after sign-in. The account-assigned Development Domain remains the same.
+If Task Scheduler registration is blocked by local Windows policy, `setup-ngrok.ps1 -InstallStartupTask` automatically falls back to the current user's Startup folder. The account-assigned Development Domain remains the same.
 
 ## Contract 2.0 rollout and rollback
 
