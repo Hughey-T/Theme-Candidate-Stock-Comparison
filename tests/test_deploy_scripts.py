@@ -93,7 +93,7 @@ def test_ngrok_script_publishes_prefixed_theme_url() -> None:
     text = NGROK_SCRIPT.read_text(encoding="utf-8")
 
     required = [
-        "$publicUrl = \"$publicOrigin$servicePrefixNormalized\"",
+        '$publicUrl = "$publicOrigin$servicePrefixNormalized"',
         "THEME_COMPARE_PUBLIC_URL",
         "$gatewayBase$ServicePrefix/health",
     ]
