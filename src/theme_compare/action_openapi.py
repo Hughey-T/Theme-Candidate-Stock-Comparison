@@ -79,15 +79,13 @@ def normalize_action_schema(
     return value
 
 
-def phase_artifact_components() -> tuple[
-    dict[str, object], dict[str, dict[str, object]]
-]:
+def phase_artifact_components() -> tuple[dict[str, object], dict[str, object]]:
     raw = load_schema("comparison-contract-v2.schema.json")
     raw_defs = raw.pop("$defs", {})
     if not isinstance(raw_defs, dict):
         raise ValueError("comparison contract $defs must be an object")
 
-    components: dict[str, dict[str, object]] = {}
+    components: dict[str, object] = {}
     for def_name, component_name in _PHASE_DEF_COMPONENT_NAMES.items():
         definition = raw_defs.get(def_name)
         if not isinstance(definition, dict):
