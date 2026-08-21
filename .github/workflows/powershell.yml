@@ -1,0 +1,31 @@
+name: PowerShell
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  parse:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Parse production PowerShell scripts
+        shell: powershell
+        run: |
+          $files = @(
+            'deploy/setup-ngrok.ps1',
+            'deploy/verify-production.ps1',
+            'deploy/finalize-production.ps1'
+          )
+          foreach ($file in $files) {
+            $errors = $null
+            [void][System.Management.Automation.Language.Parser]::ParseFile(
+              (Resolve-Path $file),
+              [ref]$null,
+              [ref]$errors
+            )
+            if ($errors.Count -gt 0) {
+              $errors | Format-List | Out-Host
+              throw "PowerShell parse failed: $file"
+            }
+          }
