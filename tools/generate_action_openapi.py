@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 import json
-from copy import deepcopy
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -17,6 +16,21 @@ def load_schema(name: str) -> dict:
     value = json.loads((SCHEMA_ROOT / name).read_text(encoding="utf-8"))
     value.pop("$schema", None)
     value.pop("$id", None)
+    return value
+
+
+def rebase_local_refs(value: object, component_name: str) -> object:
+    """Rebase schema-local refs after embedding a schema under OpenAPI components."""
+    if isinstance(value, dict):
+        result: dict[str, object] = {}
+        for key, item in value.items():
+            if key == "$ref" and isinstance(item, str) and item.startswith("#/"):
+                result[key] = f"#/components/schemas/{component_name}{item[1:]}"
+            else:
+                result[key] = rebase_local_refs(item, component_name)
+        return result
+    if isinstance(value, list):
+        return [rebase_local_refs(item, component_name) for item in value]
     return value
 
 
@@ -79,7 +93,9 @@ def request_body(schema_name: str) -> dict:
 
 def build_document(server_url: str) -> dict:
     candidate = load_schema("normalized-candidate.schema.json")
-    phase_artifact = load_schema("comparison-contract-v2.schema.json")
+    phase_artifact = rebase_local_refs(
+        load_schema("comparison-contract-v2.schema.json"), "BlindPhaseArtifactV2"
+    )
     horizon = {
         "type": "object",
         "additionalProperties": False,
