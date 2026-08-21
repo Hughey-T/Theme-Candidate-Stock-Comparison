@@ -33,6 +33,12 @@ function Get-EffectiveContainerApiKey {
     if ($exitCode -ne 0) {
         return ''
     }
+
+    # Some shell/CLI layers can preserve one surrounding quote pair. Remove only
+    # that transport artifact; never trim or otherwise normalize the secret.
+    if ($value.Length -ge 2 -and $value.StartsWith('"') -and $value.EndsWith('"')) {
+        $value = $value.Substring(1, $value.Length - 2)
+    }
     return [string]$value
 }
 
@@ -57,7 +63,7 @@ function Test-LocalApiKey {
             return $false
         }
         $status = [int]$_.Exception.Response.StatusCode
-        return ($status -ne 401)
+        return ($status -in @(400, 404, 409, 422))
     }
 }
 
