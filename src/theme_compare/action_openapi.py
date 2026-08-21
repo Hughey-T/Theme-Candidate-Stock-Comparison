@@ -310,7 +310,7 @@ def _paths() -> dict[str, object]:
                 "summary": "Create a contract 2.0 comparison session",
                 "parameters": [idem()],
                 "requestBody": request_body("CreateBlindComparisonSessionV2Request"),
-                "responses": standard_responses("201"),
+                "responses": standard_responses(),
             }
         },
         "/v2/sessions/{session_id}/next-contract": {
