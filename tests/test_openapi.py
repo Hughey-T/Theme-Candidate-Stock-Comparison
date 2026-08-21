@@ -77,8 +77,7 @@ def test_v2_mutating_operations_require_idempotency_key():
         matches = [
             parameter
             for parameter in parameters
-            if (parameter.get("name"), parameter.get("in"))
-            == ("Idempotency-Key", "header")
+            if (parameter.get("name"), parameter.get("in")) == ("Idempotency-Key", "header")
         ]
         assert len(matches) == 1
         assert matches[0]["required"] is True
