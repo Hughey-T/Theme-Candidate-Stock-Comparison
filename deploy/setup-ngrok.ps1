@@ -4,17 +4,34 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
-function Get-NgrokTunnelUrl {
+function Get-NgrokTunnels {
     try {
         $response = Invoke-RestMethod -Uri 'http://127.0.0.1:4040/api/tunnels' -TimeoutSec 2
     }
     catch {
-        return $null
+        return @()
     }
 
-    $httpsTunnel = $response.tunnels |
-        Where-Object { $_.public_url -match '^https://' } |
+    if ($null -eq $response.tunnels) {
+        return @()
+    }
+    return @($response.tunnels)
+}
+
+function Get-NgrokTunnelUrlForPort {
+    param(
+        [Parameter(Mandatory = $true)][object[]]$Tunnels,
+        [Parameter(Mandatory = $true)][int]$Port
+    )
+
+    $targetPattern = "^https?://(127\.0\.0\.1|localhost):$Port/?$"
+    $httpsTunnel = $Tunnels |
+        Where-Object {
+            $_.public_url -match '^https://' -and
+            [string]$_.config.addr -match $targetPattern
+        } |
         Select-Object -First 1
+
     if ($null -eq $httpsTunnel) {
         return $null
     }
@@ -40,9 +57,15 @@ function Install-NgrokStartupShortcut {
 `$ErrorActionPreference = 'SilentlyContinue'
 try {
     `$response = Invoke-RestMethod -Uri 'http://127.0.0.1:4040/api/tunnels' -TimeoutSec 2
-    `$existing = `$response.tunnels | Where-Object { `$_.public_url -match '^https://' } | Select-Object -First 1
+    `$existing = `$response.tunnels | Where-Object {
+        `$_.public_url -match '^https://' -and
+        [string]`$_.config.addr -match '^https?://(127\.0\.0\.1|localhost):8000/?$'
+    } | Select-Object -First 1
     if (`$null -ne `$existing) {
         exit 0
+    }
+    if (`$null -ne (`$response.tunnels | Where-Object { `$_.public_url -match '^https://' } | Select-Object -First 1)) {
+        exit 2
     }
 }
 catch {
@@ -93,8 +116,16 @@ if ($localHealth.service -ne 'ok' -or $localHealth.storage -ne 'ok' -or -not $lo
 }
 
 Write-Host '=== 4. Start or reuse ngrok endpoint ==='
-$publicUrl = Get-NgrokTunnelUrl
+$tunnels = Get-NgrokTunnels
+$publicUrl = Get-NgrokTunnelUrlForPort -Tunnels $tunnels -Port 8000
+
 if ([string]::IsNullOrWhiteSpace($publicUrl)) {
+    $otherHttps = $tunnels | Where-Object { $_.public_url -match '^https://' }
+    if ($otherHttps.Count -gt 0) {
+        $summary = ($otherHttps | ForEach-Object { "$($_.public_url) -> $($_.config.addr)" }) -join '; '
+        throw "No ngrok HTTPS tunnel points to Theme Comparison on port 8000. Existing endpoint(s): $summary. Do not reuse another service's endpoint. On ngrok Free, the account development domain may already be occupied; use a separate stable domain/paid ngrok domain or another stable ingress."
+    }
+
     $logDir = Join-Path $env:LOCALAPPDATA 'ThemeCandidateStockComparison'
     New-Item -ItemType Directory -Path $logDir -Force | Out-Null
     $stdoutPath = Join-Path $logDir 'ngrok.stdout.log'
@@ -108,7 +139,8 @@ if ([string]::IsNullOrWhiteSpace($publicUrl)) {
 
     for ($i = 0; $i -lt 30; $i++) {
         Start-Sleep -Seconds 1
-        $publicUrl = Get-NgrokTunnelUrl
+        $tunnels = Get-NgrokTunnels
+        $publicUrl = Get-NgrokTunnelUrlForPort -Tunnels $tunnels -Port 8000
         if (-not [string]::IsNullOrWhiteSpace($publicUrl)) {
             break
         }
@@ -116,7 +148,7 @@ if ([string]::IsNullOrWhiteSpace($publicUrl)) {
 }
 
 if ([string]::IsNullOrWhiteSpace($publicUrl)) {
-    throw 'ngrok did not expose a public HTTPS endpoint. Check ngrok authentication and logs under %LOCALAPPDATA%\ThemeCandidateStockComparison.'
+    throw 'ngrok did not expose a public HTTPS endpoint for http://127.0.0.1:8000. Check ngrok account limits and logs under %LOCALAPPDATA%\ThemeCandidateStockComparison.'
 }
 $publicUrl = $publicUrl.TrimEnd('/')
 if ($publicUrl -notmatch '^https://') {
