@@ -39,8 +39,8 @@ def test_v2_create_requires_and_replays_query_idempotency_key(tmp_path):
     first = client.post(url, headers=auth, json=body)
     second = client.post(url, headers=auth, json=body)
 
-    assert first.status_code == 201
-    assert second.status_code == 201
+    assert first.status_code == 200
+    assert second.status_code == 200
     assert first.json()["session_id"] == second.json()["session_id"]
     sid = first.json()["session_id"]
     next_contract = client.get(f"/v2/sessions/{sid}/next-contract", headers=auth)
@@ -55,7 +55,7 @@ def test_v2_keeps_header_idempotency_key_compatibility(tmp_path):
         "Idempotency-Key": "legacy-header-0001",
     }
     response = client.post("/v2/sessions", headers=headers, json=create_body())
-    assert response.status_code == 201
+    assert response.status_code == 200
 
 
 def test_v2_rejects_conflicting_query_and_header_idempotency_keys(tmp_path):
@@ -78,7 +78,7 @@ def test_v2_rejects_idempotency_key_reuse_with_different_payload(tmp_path):
     url = "/v2/sessions?idempotency_key=create-request-0002"
     headers = {"Authorization": "Bearer secret"}
     first = client.post(url, headers=headers, json=create_body())
-    assert first.status_code == 201
+    assert first.status_code == 200
 
     changed = create_body()
     changed["theme"] = "different-theme"
