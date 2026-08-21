@@ -1,6 +1,7 @@
 $ErrorActionPreference = "Stop"
 
-$publicUrl = ($env:THEME_COMPARE_PUBLIC_URL ?? "").TrimEnd('/')
+$publicUrl = [string]$env:THEME_COMPARE_PUBLIC_URL
+$publicUrl = $publicUrl.TrimEnd('/')
 if ([string]::IsNullOrWhiteSpace($publicUrl)) {
     throw "THEME_COMPARE_PUBLIC_URL is required (for example https://theme-compare.your-domain.example)."
 }
@@ -11,7 +12,8 @@ if ($publicUrl -match 'trycloudflare\.com|example\.(com|org|net)|\.invalid') {
     throw "Ephemeral or placeholder public URLs are forbidden for production."
 }
 
-$apiKey = ($env:THEME_COMPARE_API_KEY ?? "").Trim()
+$apiKey = [string]$env:THEME_COMPARE_API_KEY
+$apiKey = $apiKey.Trim()
 if ([string]::IsNullOrWhiteSpace($apiKey)) {
     throw "THEME_COMPARE_API_KEY is required."
 }
@@ -35,6 +37,7 @@ try {
     throw "Unauthenticated request unexpectedly succeeded."
 }
 catch {
+    if ($null -eq $_.Exception.Response) { throw }
     $status = [int]$_.Exception.Response.StatusCode
     if ($status -ne 401) { throw }
 }
