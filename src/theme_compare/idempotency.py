@@ -26,8 +26,8 @@ class IdempotencyStore:
     """Crash-safe persistent idempotency records scoped by operation."""
 
     def __init__(self, root: Path) -> None:
-        self.root = (root / ".idempotency").resolve()
-        self.root.mkdir(parents=True, exist_ok=True, mode=0o700)
+        self.storage_root = root.resolve()
+        self.root = self.storage_root / ".idempotency"
 
     @staticmethod
     def _validate_key(key: str) -> str:
@@ -35,6 +35,14 @@ class IdempotencyStore:
         if not (8 <= len(value) <= 200):
             raise SemanticError("Idempotency-Key must be 8..200 characters")
         return value
+
+    def _ensure_root(self) -> None:
+        if not self.storage_root.is_dir():
+            raise StorageError("idempotency storage root unavailable")
+        try:
+            self.root.mkdir(parents=False, exist_ok=True, mode=0o700)
+        except OSError as exc:
+            raise StorageError("idempotency storage unavailable") from exc
 
     def _record_path(self, scope: str, key: str) -> Path:
         identity = hashlib.sha256(f"{scope}\0{key}".encode()).hexdigest()
@@ -48,6 +56,7 @@ class IdempotencyStore:
         operation: Callable[[], T],
     ) -> T:
         key = self._validate_key(key)
+        self._ensure_root()
         payload_sha256 = _canonical_hash(payload)
         path = self._record_path(scope, key)
         lock_path = path.with_suffix(".lock")
