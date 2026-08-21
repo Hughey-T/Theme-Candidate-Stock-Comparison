@@ -10,6 +10,16 @@ from urllib.parse import urlparse
 
 DEFAULT_OUTPUT = Path("openapi/custom-gpt-action.v2.openapi.json")
 
+_PHASE_DEF_COMPONENT_NAMES = {
+    "horizon": "BlindPhaseHorizon",
+    "information": "BlindPhaseInformation",
+    "judgment": "BlindPhaseJudgment",
+    "ranking": "BlindPhaseRanking",
+    "candidateSetTransition": "BlindPhaseCandidateSetTransition",
+    "pairwise": "BlindPhasePairwise",
+    "sensitivity": "BlindPhaseSensitivity",
+}
+
 
 def load_schema(name: str) -> dict[str, object]:
     raw = resources.files("theme_compare.schemas").joinpath(name).read_text(encoding="utf-8")
@@ -19,19 +29,82 @@ def load_schema(name: str) -> dict[str, object]:
     return value
 
 
-def rebase_local_refs(value: object, component_name: str) -> object:
-    """Rebase schema-local refs after embedding a schema under OpenAPI components."""
+def normalize_action_schema(
+    value: object,
+    *,
+    def_component_names: dict[str, str] | None = None,
+) -> object:
+    """Normalize JSON Schema features that the Custom GPT Action editor handles narrowly.
+
+    The runtime keeps validating against the canonical Draft 2020-12 schema. This
+    normalization only affects the OpenAPI document supplied to ChatGPT Actions.
+    """
     if isinstance(value, dict):
         result: dict[str, object] = {}
         for key, item in value.items():
-            if key == "$ref" and isinstance(item, str) and item.startswith("#/"):
-                result[key] = f"#/components/schemas/{component_name}{item[1:]}"
+            if key == "$defs":
+                continue
+            if (
+                key == "$ref"
+                and isinstance(item, str)
+                and item.startswith("#/$defs/")
+                and def_component_names is not None
+            ):
+                def_name = item.removeprefix("#/$defs/")
+                component_name = def_component_names.get(def_name)
+                if component_name is None:
+                    raise ValueError(f"unmapped local schema definition: {def_name}")
+                result[key] = f"#/components/schemas/{component_name}"
             else:
-                result[key] = rebase_local_refs(item, component_name)
+                result[key] = normalize_action_schema(
+                    item,
+                    def_component_names=def_component_names,
+                )
+
+        if result.get("type") == "object" and "properties" not in result:
+            result["properties"] = {}
+
+        enum_values = result.get("enum")
+        if "type" not in result and isinstance(enum_values, list) and enum_values:
+            if all(isinstance(item, str) for item in enum_values):
+                result["type"] = "string"
+
         return result
+
     if isinstance(value, list):
-        return [rebase_local_refs(item, component_name) for item in value]
+        return [
+            normalize_action_schema(item, def_component_names=def_component_names)
+            for item in value
+        ]
     return value
+
+
+def phase_artifact_components() -> tuple[dict[str, object], dict[str, dict[str, object]]]:
+    raw = load_schema("comparison-contract-v2.schema.json")
+    raw_defs = raw.pop("$defs", {})
+    if not isinstance(raw_defs, dict):
+        raise ValueError("comparison contract $defs must be an object")
+
+    components: dict[str, dict[str, object]] = {}
+    for def_name, component_name in _PHASE_DEF_COMPONENT_NAMES.items():
+        definition = raw_defs.get(def_name)
+        if not isinstance(definition, dict):
+            raise ValueError(f"comparison contract definition is missing: {def_name}")
+        normalized = normalize_action_schema(
+            definition,
+            def_component_names=_PHASE_DEF_COMPONENT_NAMES,
+        )
+        if not isinstance(normalized, dict):
+            raise TypeError(f"normalized component must be an object: {component_name}")
+        components[component_name] = normalized
+
+    phase_artifact = normalize_action_schema(
+        raw,
+        def_component_names=_PHASE_DEF_COMPONENT_NAMES,
+    )
+    if not isinstance(phase_artifact, dict):
+        raise TypeError("normalized phase artifact must be an object")
+    return phase_artifact, components
 
 
 def validate_server_url(value: str) -> str:
@@ -300,9 +373,21 @@ def _paths() -> dict[str, object]:
 
 
 def build_document(server_url: str) -> dict[str, object]:
-    phase_artifact = rebase_local_refs(
-        load_schema("comparison-contract-v2.schema.json"), "BlindPhaseArtifactV2"
-    )
+    phase_artifact, phase_components = phase_artifact_components()
+    schemas: dict[str, object] = {
+        "CandidateIdentity": normalize_action_schema(load_schema("normalized-candidate.schema.json")),
+        "Horizon": _horizon_schema(),
+        "FlexibleHandoff": {
+            "type": "object",
+            "additionalProperties": True,
+            "properties": {},
+        },
+        "CreateBlindComparisonSessionV2Request": _create_request_schema(),
+        "BlindPhaseArtifactV2": phase_artifact,
+        **phase_components,
+        "StartBlindComparisonUpdateV2Request": _update_request_schema(),
+        "GenericResponse": _generic_response_schema(),
+    }
     return {
         "openapi": "3.1.0",
         "info": {
@@ -317,15 +402,7 @@ def build_document(server_url: str) -> dict[str, object]:
         "paths": _paths(),
         "components": {
             "securitySchemes": {"BearerAuth": {"type": "http", "scheme": "bearer"}},
-            "schemas": {
-                "CandidateIdentity": load_schema("normalized-candidate.schema.json"),
-                "Horizon": _horizon_schema(),
-                "FlexibleHandoff": {"type": "object", "additionalProperties": True},
-                "CreateBlindComparisonSessionV2Request": _create_request_schema(),
-                "BlindPhaseArtifactV2": phase_artifact,
-                "StartBlindComparisonUpdateV2Request": _update_request_schema(),
-                "GenericResponse": _generic_response_schema(),
-            },
+            "schemas": schemas,
         },
     }
 
@@ -339,3 +416,7 @@ def main() -> None:
     encoded = json.dumps(document, indent=2, ensure_ascii=False, sort_keys=False) + "\n"
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(encoded, encoding="utf-8")
+
+
+if __name__ == "__main__":
+    main()
