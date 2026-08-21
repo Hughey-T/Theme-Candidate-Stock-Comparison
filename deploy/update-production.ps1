@@ -1,6 +1,8 @@
 param(
     [string]$ContainerName = 'theme-compare',
-    [string]$ImageName = 'theme-compare:latest'
+    [string]$ImageName = 'theme-compare:latest',
+    [string]$GatewayNetworkName = 'local-ai-gateway',
+    [string]$GatewayAlias = 'theme-compare'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -116,6 +118,14 @@ foreach ($mount in $old.Mounts) {
     Write-Host "  $($mount.Type): $label -> $($mount.Destination)"
 }
 
+$gatewayNetworkProperty = $old.NetworkSettings.Networks.PSObject.Properties |
+    Where-Object { $_.Name -eq $GatewayNetworkName } |
+    Select-Object -First 1
+$preserveGatewayNetwork = $null -ne $gatewayNetworkProperty
+if ($preserveGatewayNetwork) {
+    Write-Host "Shared gateway network detected: $GatewayNetworkName (alias $GatewayAlias will be preserved)"
+}
+
 $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
 $candidateImage = "theme-compare:candidate-$timestamp"
 $rollbackImage = "theme-compare:rollback-$timestamp"
@@ -157,6 +167,11 @@ try {
     $runArgs += $candidateImage
     Invoke-Docker @runArgs
     $replacementStarted = $true
+
+    if ($preserveGatewayNetwork) {
+        Write-Host '=== 5b. Restore shared gateway network ==='
+        Invoke-Docker network connect --alias $GatewayAlias $GatewayNetworkName $ContainerName
+    }
 
     Write-Host '=== 6. Verify v2 health ==='
     $health = Wait-RuntimeReady
