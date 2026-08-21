@@ -159,16 +159,73 @@ class V2RuntimeService:
         state = self._load(sid)
         if state["status"] == "complete":
             raise SemanticError("generation complete")
+        phase = state["phase"]
+        workflow = state["workflow"]
+        freeze_phase = 10 if workflow == "initial" else 2
+        reconcile_phase = 11 if workflow == "initial" else 3
+        final_phase = 12 if workflow == "initial" else 4
+        requirements: dict[str, Any] = {
+            "evidence_as_of_max": state["source_cutoff_at"],
+            "required_payload_keys": [],
+        }
+        if workflow == "initial" and phase == 2:
+            requirements.update(
+                required_payload_keys=["eligible_candidate_set"],
+                candidate_transition={
+                    "field": "eligible_candidate_set",
+                    "max_candidates": 8,
+                    "allowed_candidate_ids": state["blind_order"],
+                },
+            )
+        if workflow == "initial" and phase == 6:
+            requirements.update(
+                required_payload_keys=["deep_comparison_set"],
+                candidate_transition={
+                    "field": "deep_comparison_set",
+                    "max_candidates": 5,
+                    "allowed_candidate_ids": state["blind_order"],
+                },
+            )
+        if phase == freeze_phase:
+            requirements["required_payload_keys"] = ["independent_ai_ranking"]
+            requirements["independent_ai_ranking_policy"] = "submit_once_and_freeze"
+        if phase == reconcile_phase:
+            requirements["required_payload_keys"] = ["rankings", "deep_candidates", "pairwise"]
+            requirements["independent_ai_ranking_policy"] = (
+                "omit; the frozen ranking from the prior phase remains authoritative. "
+                "If supplied, it must be byte-for-byte value-equivalent to the frozen object."
+            )
+            requirements["ranking_keys"] = [
+                "evidence_only_mechanical",
+                "scenario_derived",
+            ]
+            requirements["mechanical_input_classifications"] = ["FACTS", "EXTERNAL_ESTIMATES"]
+            requirements["pairwise_requirement"] = (
+                "exactly one unordered pair record for every pair in deep_candidates"
+            )
+        if phase == final_phase:
+            requirements["required_payload_keys"] = [
+                "integrated_selection",
+                "decision_ledger",
+                "reconciliation_handoff",
+            ]
+            requirements["max_selected_candidates"] = 2
+            requirements["selection_policy"] = (
+                "selected candidates must have no active hard gate; empty selection requires "
+                "decision=NO_SELECTION and non-empty selection requires decision=SELECTION"
+            )
         result = {
-            "workflow": state["workflow"],
-            "phase": state["phase"],
+            "workflow": workflow,
+            "phase": phase,
             "generation_id": state["generation_id"],
             "candidate_order": state["blind_order"],
             "horizons": state["horizons"],
+            "source_cutoff_at": state["source_cutoff_at"],
+            "submission_requirements": requirements,
             "mechanical_rankings_disclosed": False,
         }
         # No ranking, score, previous conclusion, or persuasive upstream data crosses this boundary.
-        if state["workflow"] == "initial" and state["phase"] >= 11:
+        if phase >= reconcile_phase:
             result["mechanical_rankings_disclosed"] = True
             result["reconciliation_available"] = state["independent_ai_frozen"]
         return result
@@ -294,8 +351,9 @@ class V2RuntimeService:
         state["candidate_sets"][name] = candidate_set_id(selected) if selected else "EMPTY"
 
     def _validate_phase11(self, state: dict[str, Any], payload: dict[str, Any]) -> None:
-        if self._hash(payload.get("independent_ai_ranking")) != state["independent_ai_hash"]:
-            raise SemanticError("independent AI ranking is immutable")
+        if "independent_ai_ranking" in payload:
+            if self._hash(payload["independent_ai_ranking"]) != state["independent_ai_hash"]:
+                raise SemanticError("independent AI ranking is immutable")
         rankings = payload.get("rankings", {})
         if set(rankings) != {"evidence_only_mechanical", "scenario_derived"}:
             raise SemanticError("mechanical and scenario rankings must remain separate")
