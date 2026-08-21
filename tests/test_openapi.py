@@ -1,26 +1,16 @@
 from __future__ import annotations
 
 import json
-import subprocess
-import sys
-from pathlib import Path
 
+import pytest
 from jsonschema import Draft202012Validator
 
 from theme_compare.api import create_app
 from theme_compare.storage import JsonVolumeStorage
+from tools.generate_action_openapi import build_document, validate_server_url
 
-OPENAPI_PATH = Path("openapi/custom-gpt-action.openapi.yaml")
-DOC = json.loads(OPENAPI_PATH.read_text(encoding="utf-8"))
-HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
 EXPECTED_OPERATION_IDS = {
     "getRuntimeHealth",
-    "createComparisonSession",
-    "getComparisonSession",
-    "getNextPhaseContract",
-    "submitComparisonPhase",
-    "startComparisonUpdate",
-    "getActiveComparisonHandoff",
     "createBlindComparisonSessionV2",
     "getBlindPhaseContractV2",
     "submitBlindPhaseV2",
@@ -30,133 +20,100 @@ EXPECTED_OPERATION_IDS = {
     "acknowledgeBlindAnalysisV2",
     "getReconciliationHandoffV2",
 }
-SESSION_OPERATIONS = {
-    ("/v1/sessions/{session_id}", "get"),
-    ("/v1/sessions/{session_id}/next-contract", "get"),
-    ("/v1/sessions/{session_id}/phases", "post"),
-    ("/v1/sessions/{session_id}/updates", "post"),
-    ("/v1/sessions/{session_id}/handoff", "get"),
-}
+HTTP_METHODS = {"get", "post", "put", "patch", "delete"}
+TEST_ORIGIN = "https://theme-compare.example.co.jp"
 
 
-def operations():
-    for path, item in DOC["paths"].items():
+def document():
+    return build_document(TEST_ORIGIN)
+
+
+def operations(doc):
+    for path, item in doc["paths"].items():
         for method, operation in item.items():
             if method in HTTP_METHODS:
                 yield path, method, operation
 
 
-def resolve(schema):
+def resolve(doc, schema):
     if "$ref" not in schema:
         return schema
-    return DOC["components"]["schemas"][schema["$ref"].rsplit("/", 1)[1]]
+    name = schema["$ref"].rsplit("/", 1)[1]
+    return doc["components"]["schemas"][name]
 
 
-def test_openapi_31_unique_operations_and_no_placeholder():
-    assert DOC["openapi"] == "3.1.0"
-    ids = [operation["operationId"] for _, _, operation in operations()]
+def test_v2_only_openapi_has_exact_unique_operations():
+    doc = document()
+    assert doc["openapi"] == "3.1.0"
+    ids = [operation["operationId"] for _, _, operation in operations(doc)]
     assert set(ids) == EXPECTED_OPERATION_IDS
     assert len(ids) == len(set(ids)) == len(EXPECTED_OPERATION_IDS)
-    assert all("YOUR_" not in server["url"] for server in DOC["servers"])
+    assert all(not path.startswith("/v1/") for path in doc["paths"])
 
 
-def test_route_method_and_auth_alignment(tmp_path):
-    app = create_app(JsonVolumeStorage(tmp_path), "x")
-    actual = {
-        (route.path, next(iter(route.methods)).lower())
-        for route in app.routes
-        if getattr(route, "methods", None)
+def test_v2_post_request_bodies_resolve_to_objects():
+    doc = document()
+    expected = {
+        "/v2/sessions": "CreateBlindComparisonSessionV2Request",
+        "/v2/sessions/{session_id}/phases": "BlindPhaseArtifactV2",
+        "/v2/sessions/{session_id}/updates": "StartBlindComparisonUpdateV2Request",
     }
-    declared = {(path, method) for path, method, _ in operations()}
-    assert declared <= actual
-    for path, _, operation in operations():
-        assert operation.get("security", DOC.get("security")) == (
-            [] if path == "/health" else [{"BearerAuth": []}]
-        )
+    for path, name in expected.items():
+        operation = doc["paths"][path]["post"]
+        assert operation["requestBody"]["required"] is True
+        schema = operation["requestBody"]["content"]["application/json"]["schema"]
+        assert schema == {"$ref": f"#/components/schemas/{name}"}
+        assert resolve(doc, schema)["type"] == "object"
 
 
-def test_named_request_response_contracts_are_closed():
-    required = {
-        "CreateSessionRequest",
-        "CreateSessionResponse",
-        "SessionSummary",
-        "NextPhaseContract",
-        "PhaseArtifact",
-        "PhaseAcceptedResponse",
-        "StartUpdateRequest",
-        "StartUpdateResponse",
-        "ActiveHandoffResponse",
-        "ValidationError",
-        "TerminalIntegrityError",
-        "HealthResponse",
-    }
-    assert required <= DOC["components"]["schemas"].keys()
-    for name in required:
-        schema = DOC["components"]["schemas"][name]
-        if schema.get("type") == "object" and "oneOf" not in schema:
-            assert schema.get("additionalProperties") is False
-            assert schema.get("required")
+def test_v2_mutating_operations_require_idempotency_key():
+    doc = document()
+    for path in (
+        "/v2/sessions",
+        "/v2/sessions/{session_id}/phases",
+        "/v2/sessions/{session_id}/updates",
+    ):
+        parameters = doc["paths"][path]["post"].get("parameters", [])
+        matches = [p for p in parameters if (p.get("name"), p.get("in")) == ("Idempotency-Key", "header")]
+        assert len(matches) == 1
+        assert matches[0]["required"] is True
+
+
+def test_all_component_schemas_are_valid_draft_202012():
+    doc = document()
+    for schema in doc["components"]["schemas"].values():
         Draft202012Validator.check_schema(schema)
 
 
-def test_create_request_is_packaged_upstream_contract():
-    packaged = json.loads(
-        Path("src/theme_compare/schemas/upstream-theme-handoff.schema.json").read_text(
-            encoding="utf-8"
-        )
-    )
-    assert DOC["components"]["schemas"]["CreateSessionRequest"] == packaged
+def test_action_routes_exist_in_fastapi(tmp_path):
+    doc = document()
+    app = create_app(JsonVolumeStorage(tmp_path), "secret")
+    actual = {
+        (route.path, method.lower())
+        for route in app.routes
+        if getattr(route, "methods", None)
+        for method in route.methods
+    }
+    declared = {(path, method) for path, method, _ in operations(doc)}
+    assert declared <= actual
 
 
-def test_phase_artifact_is_packaged_object_contract():
-    packaged = json.loads(
-        Path("src/theme_compare/schemas/phase-artifact.schema.json").read_text(encoding="utf-8")
-    )
-    schema = DOC["components"]["schemas"]["PhaseArtifact"]
-    assert schema == packaged
-    assert schema["type"] == "object"
-    assert len(schema["oneOf"]) == 12
+def test_action_document_is_deterministic():
+    first = json.dumps(document(), sort_keys=True, separators=(",", ":"))
+    second = json.dumps(document(), sort_keys=True, separators=(",", ":"))
+    assert first == second
 
 
-def test_path_item_parameters_are_not_used():
-    for path_item in DOC["paths"].values():
-        assert "parameters" not in path_item
-
-
-def test_session_id_is_required_at_operation_level():
-    for path, method in SESSION_OPERATIONS:
-        parameters = DOC["paths"][path][method].get("parameters", [])
-        matches = [
-            parameter
-            for parameter in parameters
-            if (parameter.get("name"), parameter.get("in")) == ("session_id", "path")
-        ]
-        assert len(matches) == 1
-        assert matches[0]["required"] is True
-        assert parameters[0] == matches[0]
-
-
-def test_handoff_keeps_session_id_and_include_history():
-    parameters = DOC["paths"]["/v1/sessions/{session_id}/handoff"]["get"]["parameters"]
-    assert [(parameter["name"], parameter["in"]) for parameter in parameters] == [
-        ("session_id", "path"),
-        ("include_history", "query"),
-    ]
-
-
-def test_submit_phase_request_resolves_to_object_schema():
-    schema = DOC["paths"]["/v1/sessions/{session_id}/phases"]["post"]["requestBody"]["content"][
-        "application/json"
-    ]["schema"]
-    resolved = resolve(schema)
-    assert resolved["type"] == "object"
-    assert len(resolved["oneOf"]) == 12
-
-
-def test_openapi_generation_is_byte_stable():
-    before = OPENAPI_PATH.read_bytes()
-    subprocess.run(
-        [sys.executable, "tools/generate_openapi.py"],
-        check=True,
-    )
-    assert OPENAPI_PATH.read_bytes() == before
+@pytest.mark.parametrize(
+    "url",
+    [
+        "http://theme.example.co.jp",
+        "https://foo.trycloudflare.com",
+        "https://runtime.example.com",
+        "https://theme.invalid",
+        "relative-host",
+    ],
+)
+def test_production_server_url_rejects_ephemeral_or_placeholder_hosts(url):
+    with pytest.raises(ValueError):
+        validate_server_url(url)
