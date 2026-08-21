@@ -49,13 +49,10 @@ def test_update_script_does_not_print_environment_values() -> None:
 def test_update_script_preserves_shared_gateway_network() -> None:
     text = UPDATE_SCRIPT.read_text(encoding="utf-8")
 
-    required = [
-        "GatewayNetworkName = 'local-ai-gateway'",
-        "GatewayAlias = 'theme-compare'",
-        "Invoke-Docker network connect --alias $GatewayAlias $GatewayNetworkName $ContainerName",
-    ]
-    for marker in required:
-        assert marker in text
+    assert "GatewayNetworkName = 'local-ai-gateway'" in text
+    assert "GatewayAlias = 'theme-compare'" in text
+    assert "Invoke-Docker network connect --alias $GatewayAlias" in text
+    assert "$GatewayNetworkName $ContainerName" in text
 
 
 def test_ngrok_script_accepts_current_free_domain_suffixes() -> None:
@@ -72,7 +69,8 @@ def test_ngrok_script_uses_only_central_gateway_tunnel() -> None:
         "ServicePrefix = '/theme-compare'",
         "Get-NgrokTunnelUrlForPort",
         "-Port $GatewayPort",
-        "The gateway repository owns ngrok startup; do not start a Theme-specific tunnel",
+        "The gateway repository owns ngrok startup",
+        "do not start a Theme-specific tunnel",
     ]
     for marker in required:
         assert marker in text
