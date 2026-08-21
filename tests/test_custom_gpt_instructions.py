@@ -33,7 +33,8 @@ def test_custom_gpt_instructions_pin_v2_action_flow() -> None:
 
     assert "contract_version` は必ず `2.0.0`" in text
     assert "旧v1 Actionが無いこと自体を停止理由にしてはいけない" in text
-    assert "Idempotency-Key" in text
+    assert "query parameter `idempotency_key`" in text
+    assert "`Idempotency-Key` ヘッダーを要求しない" in text
 
 
 def test_custom_gpt_instructions_forbid_legacy_startup_contract() -> None:
