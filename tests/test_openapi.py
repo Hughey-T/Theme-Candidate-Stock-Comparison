@@ -5,9 +5,9 @@ import json
 import pytest
 from jsonschema import Draft202012Validator
 
+from theme_compare.action_openapi import build_document, validate_server_url
 from theme_compare.api import create_app
 from theme_compare.storage import JsonVolumeStorage
-from tools.generate_action_openapi import build_document, validate_server_url
 
 EXPECTED_OPERATION_IDS = {
     "getRuntimeHealth",
@@ -74,7 +74,12 @@ def test_v2_mutating_operations_require_idempotency_key():
         "/v2/sessions/{session_id}/updates",
     ):
         parameters = doc["paths"][path]["post"].get("parameters", [])
-        matches = [p for p in parameters if (p.get("name"), p.get("in")) == ("Idempotency-Key", "header")]
+        matches = [
+            parameter
+            for parameter in parameters
+            if (parameter.get("name"), parameter.get("in"))
+            == ("Idempotency-Key", "header")
+        ]
         assert len(matches) == 1
         assert matches[0]["required"] is True
 
