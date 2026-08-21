@@ -46,46 +46,61 @@ def test_update_script_does_not_print_environment_values() -> None:
     assert "Write-Output $old.Config.Env" not in text
 
 
+def test_update_script_preserves_shared_gateway_network() -> None:
+    text = UPDATE_SCRIPT.read_text(encoding="utf-8")
+
+    required = [
+        "GatewayNetworkName = 'local-ai-gateway'",
+        "GatewayAlias = 'theme-compare'",
+        "Invoke-Docker network connect --alias $GatewayAlias $GatewayNetworkName $ContainerName",
+    ]
+    for marker in required:
+        assert marker in text
+
+
 def test_ngrok_script_accepts_current_free_domain_suffixes() -> None:
     text = NGROK_SCRIPT.read_text(encoding="utf-8")
 
     assert "\\.ngrok(-free)?\\.(app|dev)$" in text
 
 
-def test_ngrok_script_uses_permissionless_current_user_startup() -> None:
+def test_ngrok_script_uses_only_central_gateway_tunnel() -> None:
     text = NGROK_SCRIPT.read_text(encoding="utf-8")
 
     required = [
-        "[Environment]::GetFolderPath('Startup')",
-        "ThemeCandidateStockComparison-ngrok.lnk",
-        "Install-NgrokStartupShortcut -NgrokPath $ngrok.Source",
-        "-ExecutionPolicy Bypass -WindowStyle Hidden",
-    ]
-    for marker in required:
-        assert marker in text
-
-    assert "schtasks.exe" not in text
-
-
-def test_ngrok_script_only_reuses_port_8000_tunnel() -> None:
-    text = NGROK_SCRIPT.read_text(encoding="utf-8")
-
-    required = [
+        "GatewayPort = 8080",
+        "ServicePrefix = '/theme-compare'",
         "Get-NgrokTunnelUrlForPort",
-        "[string]$_.config.addr -match $targetPattern",
-        "-Port 8000",
-        "Do not reuse another service's endpoint",
-        "account development domain may already be occupied",
+        "-Port $GatewayPort",
+        "The gateway repository owns ngrok startup; do not start a Theme-specific tunnel",
     ]
     for marker in required:
         assert marker in text
 
 
-def test_ngrok_startup_launcher_does_not_steal_other_service_endpoint() -> None:
+def test_ngrok_script_removes_legacy_theme_specific_startup() -> None:
     text = NGROK_SCRIPT.read_text(encoding="utf-8")
 
-    assert "[string]`$_.config.addr -match '^https?://(127\\.0\\.0\\.1|localhost):8000/?$'" in text
-    assert "exit 2" in text
+    required = [
+        "Remove-LegacyThemeNgrokStartup",
+        "ThemeCandidateStockComparison-ngrok.lnk",
+        "start-ngrok.ps1",
+        "no Theme-specific startup entry is created",
+    ]
+    for marker in required:
+        assert marker in text
+
+
+def test_ngrok_script_publishes_prefixed_theme_url() -> None:
+    text = NGROK_SCRIPT.read_text(encoding="utf-8")
+
+    required = [
+        "$publicUrl = \"$publicOrigin$servicePrefixNormalized\"",
+        "THEME_COMPARE_PUBLIC_URL",
+        "$gatewayBase$ServicePrefix/health",
+    ]
+    for marker in required:
+        assert marker in text
 
 
 def test_ngrok_public_health_requires_v2_fingerprint() -> None:
