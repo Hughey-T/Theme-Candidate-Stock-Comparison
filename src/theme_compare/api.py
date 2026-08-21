@@ -257,6 +257,23 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
         return idempotency.execute("v2:create", key, payload, lambda: v2.create(payload))
 
     @app.get(
+        "/v2/session-create-result",
+        dependencies=[Depends(authorize)],
+        operation_id="recoverBlindComparisonSessionV2",
+    )
+    def recover_create_v2(idempotency_key: str = Query(...)) -> dict[str, Any]:
+        result = idempotency.read_result("v2:create", idempotency_key)
+        if result is None:
+            raise HTTPException(
+                status_code=404,
+                detail={
+                    "code": "idempotency_result_not_found",
+                    "message": "no completed session-create result exists for this idempotency key",
+                },
+            )
+        return result
+
+    @app.get(
         "/v2/sessions/{session_id}/next-contract",
         dependencies=[Depends(authorize)],
         operation_id="getBlindPhaseContractV2",
