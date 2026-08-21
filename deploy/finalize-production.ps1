@@ -23,23 +23,17 @@ function Get-EffectiveContainerApiKey {
     $previousPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'SilentlyContinue'
-        $value = @(& docker exec $Name sh -lc 'printf %s "$THEME_COMPARE_API_KEY"' 2>$null) -join ''
+        $lines = @(& docker exec $Name printenv THEME_COMPARE_API_KEY 2>$null)
         $exitCode = $LASTEXITCODE
     }
     finally {
         $ErrorActionPreference = $previousPreference
     }
 
-    if ($exitCode -ne 0) {
+    if ($exitCode -ne 0 -or $lines.Count -ne 1) {
         return ''
     }
-
-    # Some shell/CLI layers can preserve one surrounding quote pair. Remove only
-    # that transport artifact; never trim or otherwise normalize the secret.
-    if ($value.Length -ge 2 -and $value.StartsWith('"') -and $value.EndsWith('"')) {
-        $value = $value.Substring(1, $value.Length - 2)
-    }
-    return [string]$value
+    return [string]$lines[0]
 }
 
 function Test-LocalApiKey {
