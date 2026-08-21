@@ -21,6 +21,7 @@ jobs:
             'deploy/diagnose-ngrok-action-response.ps1',
             'deploy/refresh-custom-gpt-production.ps1',
             'deploy/prepare-custom-gpt-action-diagnostic.ps1',
+            'deploy/prepare-custom-gpt-full-schema-diagnostic.ps1',
             'deploy/diagnose-custom-gpt-action-probe.ps1'
           )
           foreach ($file in $files) {
