@@ -22,7 +22,7 @@ Contract 1.0 endpoints remain a legacy completion/read path inside the runtime o
 * v2 POSTの永続`Idempotency-Key`により同一要求の安全な再送を保証
 * healthでcontract/API profile/build/schema fingerprintを公開し、接続前に契約不一致を検出
 
-Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Custom GPT Actionの正本は `tools/generate_action_openapi.py` から生成するv2-only OpenAPIです。手書きのURL差替えやPowerShell内でのSchema再定義は行いません。
+Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Custom GPT Actionの正本は `tools/generate_action_openapi.py` から生成するv2-only OpenAPIです。
 
 ## Development
 
@@ -34,39 +34,74 @@ mypy src
 pytest -q
 ```
 
+## Production topology
+
+複数のローカルシステムで1つの固定ngrok Development Domainを共有するため、production ingressは共有 **Local AI Gateway** を使用します。
+
+```text
+Custom GPT Action
+  ↓
+https://<fixed-ngrok-domain>/theme-compare
+  ↓
+ngrok
+  ↓
+Local AI Gateway (Caddy, 127.0.0.1:8080)
+  ↓  /theme-compare prefixを除去
+Theme Comparison container :8000
+  ↓
+persistent theme-compare-data volume
+```
+
+Gateway本体・ngrok起動・route registryは `AI-Development-Orchestrator` repository側で管理します。Theme Comparisonはngrokプロセスを独自に起動しません。Gatewayのdomain root `/` は既存AI Development Orchestrator用に維持されます。
+
 ## Production usage
 
 1. `.env.example`から長いBearer secretと永続volumeを設定します。
 2. Docker Linux containerとしてruntimeを起動します。
-3. Windowsでは `deploy/setup-ngrok.ps1` を実行し、ngrok Freeの固定Development Domainを `127.0.0.1:8000` へ接続します。Cloudflare Named Tunnelは代替構成として利用できます。`trycloudflare.com` Quick Tunnelはproductionでは使用しません。
-4. 固定URLからv2-only Action Schemaを生成します。
+3. AI Development Orchestrator repositoryの `deploy/setup-gateway.ps1` で共有Gatewayへ `theme-compare` containerを接続します。
+4. ngrokが共有Gatewayのport `8080` を公開した後、このrepositoryで次を実行します。
 
 ```powershell
-.\deploy\setup-ngrok.ps1 -InstallStartupTask
+.\deploy\setup-ngrok.ps1
+```
+
+このスクリプトはTheme専用ngrokを開始しません。ローカルGatewayの `/theme-compare/health`、中央ngrok tunnelのupstreamがport 8080であること、公開 `/theme-compare/health` のv2 fingerprintを確認し、次の形式で `THEME_COMPARE_PUBLIC_URL` を設定します。
+
+```text
+https://<fixed-ngrok-domain>/theme-compare
+```
+
+過去に作成されたTheme専用ngrok Startup shortcut/launcherがあれば削除します。旧 `-InstallStartupTask` switchは互換性のため受理しますが、新しいTheme専用自動起動は作りません。
+
+5. 固定Gateway URLからv2-only Action Schemaを生成します。
+
+```powershell
 python .\tools\generate_action_openapi.py `
   --server-url $env:THEME_COMPARE_PUBLIC_URL `
   --output .\openapi\custom-gpt-action.v2.openapi.json
 ```
 
-`setup-ngrok.ps1` は既存ngrokのインストール・config/authenticationを確認し、既存endpointを再利用または `ngrok http 8000` を起動してpublic HTTPS URLを検出します。authtokenは読み出し・出力・リポジトリ保存しません。`-InstallStartupTask` を付けると現在のユーザーのWindowsログオン時にngrokを起動するタスクも作成します。
+Generatorは `https://host/theme-compare` のような安全なpath prefixをOpenAPI `servers.url` として扱い、API path自体は既存の `/v2/*` と `/health` のまま維持します。
 
-5. 生成ファイルをCustom GPT Actionsへimportし、Bearer API keyを設定します。
-6. `docs/custom-gpt-production-instructions.md`をGPT Instructionsへ反映します。
-7. `$env:THEME_COMPARE_API_KEY` を設定して `./deploy/verify-production.ps1` を実行し、`READY: Theme Candidate Stock Comparison v2` を確認します。
+6. 生成ファイルをCustom GPT Actionsへimportし、Bearer API keyを設定します。
+7. `docs/custom-gpt-production-instructions.md`をGPT Instructionsへ反映します。
+8. `$env:THEME_COMPARE_API_KEY` を設定して `./deploy/verify-production.ps1` を実行し、`READY: Theme Candidate Stock Comparison v2` を確認します。
 
-### Safe Windows runtime update
+## Safe Windows runtime update
 
-既存のproduction containerを新しいbranch内容へ更新するときは、個別のDocker操作ではなく次を使います。
+既存production containerの更新は個別Docker操作ではなく次を使います。
 
 ```powershell
 .\deploy\update-production.ps1
 ```
 
-このスクリプトはclean working tree、既存container、`127.0.0.1:8000` のport binding、persistent mountsを確認してからcandidate imageをbuildします。build成功後にのみ旧containerを停止し、旧containerと旧imageをtimestamp付きrollback対象として保持したまま、同じmount・effective environment・restart policyで新containerを起動します。新runtimeがv2 health contractを満たさない場合は旧containerへのrollbackを試みます。volume削除やpruneは行いません。
+このスクリプトはclean working tree、既存container、`127.0.0.1:8000` binding、persistent mountsを確認してからcandidate imageをbuildします。build成功後にのみ旧containerを停止し、旧containerと旧imageをtimestamp付きrollback対象として保持したまま、同じmount・effective environment・restart policyで新containerを起動します。新runtimeがv2 health contractを満たさない場合は旧containerへのrollbackを試みます。volume削除やpruneは行いません。
+
+一度 `local-ai-gateway` networkへ接続されたproduction containerは、以後のruntime更新でも `theme-compare` alias付きnetwork membershipを自動で復元します。
 
 `GET /health`以外は認証されます。v2のsession create / phase submit / update startは`Idempotency-Key`を必須とし、同じkey+payloadの再送は最初の保存済み結果を返します。同じkeyを別payloadへ再利用すると拒否されます。
 
-詳細なruntime更新、ngrok bootstrap、自動起動、Cloudflare代替構成、backup、secret rotation、OpenAPI生成、smoke test、rollback手順は [`deploy/README.md`](deploy/README.md) を参照してください。
+詳細なruntime更新、共有Gateway ingress、backup、secret rotation、OpenAPI生成、smoke test、rollback手順は [`deploy/README.md`](deploy/README.md) を参照してください。
 
 ### Windows / Docker Desktop
 
@@ -80,9 +115,8 @@ Docker build -t theme-compare:latest .
 Docker run -d --name theme-compare --restart unless-stopped --env-file .env `
   -p 127.0.0.1:8000:8000 -v theme-compare-data:/data/sessions theme-compare:latest
 Invoke-RestMethod http://127.0.0.1:8000/health
-.\deploy\setup-ngrok.ps1 -InstallStartupTask
 ```
 
-以後のコード更新は `deploy/update-production.ps1` を使用してください。
+その後、共有Gateway bootstrapを実行します。以後のコード更新は `deploy/update-production.ps1` を使用してください。
 
 本runtimeは投資助言、具体的買値、分割購入、損切り、注文執行、自動売買を提供しません。
