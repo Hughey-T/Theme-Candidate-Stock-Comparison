@@ -24,6 +24,33 @@ docker run -d --name theme-compare --restart unless-stopped --env-file .env \
 
 The named volume is mandatory for session and idempotency continuity. Restrict ingress and never log Authorization headers or request bodies.
 
+## Safe runtime update on Windows
+
+After the first production container exists, update it with:
+
+```powershell
+.\deploy\update-production.ps1
+```
+
+The updater is intentionally conservative. It:
+
+- requires a clean git working tree
+- requires the existing `theme-compare` container to be running
+- requires the runtime to be bound exactly to `127.0.0.1:8000`
+- records and reuses the current persistent volume/bind mounts, effective environment, and restart policy without printing environment values
+- builds a timestamped candidate image before stopping the old container
+- tags the old image and renames the old container with timestamped rollback names instead of deleting them
+- starts the replacement with the same mounts and environment
+- requires the new `/health` response to report `service=ok`, `storage=ok`, `ready=true`, contract `2.0.0`, profile `custom-gpt-v2`, and a schema fingerprint
+- automatically attempts to restore the old container if replacement startup or health validation fails
+- never performs `docker volume rm`, volume prune, or system prune
+
+On success it prints:
+
+`RUNTIME READY: Theme Candidate Stock Comparison v2`
+
+The stopped rollback container/image are intentionally retained after a successful update. Remove old rollback artifacts only as a separate deliberate maintenance operation after confirming the new runtime and persisted state; never remove the persistent data volume.
+
 ## Default ingress: ngrok Free Development Domain
 
 On Windows, after the runtime is healthy on `http://127.0.0.1:8000`, run:
@@ -151,10 +178,12 @@ Invoke-RestMethod http://127.0.0.1:8000/health
 .\deploy\setup-ngrok.ps1 -InstallStartupTask
 ```
 
+For subsequent code updates, run `deploy/update-production.ps1` instead of manually stopping/removing/recreating the production container.
+
 If the startup task cannot be installed because of local Windows policy, the only remaining manual operation is starting `ngrok http 8000` after sign-in. The account-assigned Development Domain remains the same.
 
 ## Contract 2.0 rollout and rollback
 
 New GPT integrations use only the v2 Action contract. Keep runtime `/v1` endpoints available while active 1.0 sessions finish; do not expose them in the new GPT Action schema. Do not point an existing v1 session at v2 or infer/migrate missing v2 state. Completed v1 publications remain immutable/read-only.
 
-Rollback deploys the prior image with the same persistent volume. Preserve `*.json`, `*.v2.json`, and `.idempotency/`; do not convert or delete v2 state during rollback.
+`update-production.ps1` retains the previous container and image under timestamped rollback names and uses the same persistent mounts. If automated health validation fails, it attempts to restore the previous container immediately. Preserve `*.json`, `*.v2.json`, `.idempotency/`, and the persistent volume; do not convert or delete state during rollback.
