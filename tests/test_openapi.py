@@ -76,7 +76,7 @@ def test_v2_post_request_bodies_resolve_to_objects():
         assert resolve(doc, schema)["type"] == "object"
 
 
-def test_v2_mutating_operations_require_idempotency_key():
+def test_v2_mutating_operations_require_action_safe_idempotency_query_key():
     doc = document()
     for path in (
         "/v2/sessions",
@@ -87,10 +87,17 @@ def test_v2_mutating_operations_require_idempotency_key():
         matches = [
             parameter
             for parameter in parameters
-            if (parameter.get("name"), parameter.get("in")) == ("Idempotency-Key", "header")
+            if (parameter.get("name"), parameter.get("in")) == ("idempotency_key", "query")
         ]
         assert len(matches) == 1
         assert matches[0]["required"] is True
+
+
+def test_action_openapi_declares_no_custom_header_parameters():
+    doc = document()
+    for _, _, operation in operations(doc):
+        for parameter in operation.get("parameters", []):
+            assert parameter.get("in") != "header"
 
 
 def test_all_component_schemas_are_valid_draft_202012():
