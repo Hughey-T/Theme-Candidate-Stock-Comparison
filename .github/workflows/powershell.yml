@@ -30,14 +30,6 @@ jobs:
               throw "PowerShell parse failed: $file"
             }
           }
-      - name: Verify UTF-8 Custom GPT instruction clipboard
+      - name: Verify UTF-8 Custom GPT instructions
         shell: powershell
-        run: |
-          .\deploy\copy-custom-gpt-instructions.ps1
-          $clipboard = Get-Clipboard -Raw
-          if ($clipboard -notmatch 'このGPTは') {
-            throw 'UTF-8 Japanese instruction text was not preserved on the clipboard.'
-          }
-          if ($clipboard -match '縺|窶') {
-            throw 'Detected mojibake markers in copied Custom GPT instructions.'
-          }
+        run: .\deploy\copy-custom-gpt-instructions.ps1 -ValidateOnly
