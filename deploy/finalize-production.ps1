@@ -13,7 +13,7 @@ foreach ($script in @($setupNgrok, $verifyProduction)) {
     }
 }
 
-function Get-ContainerApiKey {
+function Get-EffectiveContainerApiKey {
     param([Parameter(Mandatory = $true)][string]$Name)
 
     if ($null -eq (Get-Command docker -ErrorAction SilentlyContinue)) {
@@ -23,31 +23,42 @@ function Get-ContainerApiKey {
     $previousPreference = $ErrorActionPreference
     try {
         $ErrorActionPreference = 'SilentlyContinue'
-        $json = (& docker inspect $Name --format '{{json .Config.Env}}' 2>$null) -join ''
+        $value = @(& docker exec $Name sh -lc 'printf %s "$THEME_COMPARE_API_KEY"' 2>$null) -join ''
         $exitCode = $LASTEXITCODE
     }
     finally {
         $ErrorActionPreference = $previousPreference
     }
 
-    if ($exitCode -ne 0 -or [string]::IsNullOrWhiteSpace($json)) {
+    if ($exitCode -ne 0) {
         return ''
     }
+    return [string]$value
+}
 
+function Test-LocalApiKey {
+    param([Parameter(Mandatory = $true)][string]$ApiKey)
+
+    if ([string]::IsNullOrWhiteSpace($ApiKey)) {
+        return $false
+    }
+
+    $headers = @{ Authorization = "Bearer $ApiKey" }
     try {
-        $entries = @($json | ConvertFrom-Json)
+        Invoke-WebRequest `
+            -UseBasicParsing `
+            -Uri 'http://127.0.0.1:8000/v2/sessions/not-a-session/next-contract' `
+            -Headers $headers `
+            -TimeoutSec 10 | Out-Null
+        return $true
     }
     catch {
-        return ''
+        if ($null -eq $_.Exception.Response) {
+            return $false
+        }
+        $status = [int]$_.Exception.Response.StatusCode
+        return ($status -ne 401)
     }
-
-    $prefix = 'THEME_COMPARE_API_KEY='
-    $entry = $entries | Where-Object { [string]$_ -like "$prefix*" } | Select-Object -First 1
-    if ($null -eq $entry) {
-        return ''
-    }
-
-    return ([string]$entry).Substring($prefix.Length)
 }
 
 Write-Host '=== 1. Configure Theme public URL from the shared Gateway ==='
@@ -59,21 +70,27 @@ $plainTextKey = $null
 $bstr = [IntPtr]::Zero
 
 try {
-    if (-not [string]::IsNullOrWhiteSpace($existingKey)) {
+    if (-not [string]::IsNullOrWhiteSpace($existingKey) -and (Test-LocalApiKey -ApiKey $existingKey)) {
         Write-Host '=== 2. Use existing THEME_COMPARE_API_KEY from this PowerShell session ==='
+        Write-Host 'Local runtime authentication confirmed.'
     }
     else {
-        $containerKey = Get-ContainerApiKey -Name $ContainerName
-        if (-not [string]::IsNullOrWhiteSpace($containerKey)) {
-            Write-Host "=== 2. Reuse API key from running container '$ContainerName' ==="
-            Write-Host 'The key is not displayed and is used only for this verifier process.'
+        if (-not [string]::IsNullOrWhiteSpace($existingKey)) {
+            Write-Warning 'The API key in the current PowerShell session does not authenticate against the local runtime. It will not be used.'
+        }
+
+        $containerKey = Get-EffectiveContainerApiKey -Name $ContainerName
+        if (-not [string]::IsNullOrWhiteSpace($containerKey) -and (Test-LocalApiKey -ApiKey $containerKey)) {
+            Write-Host "=== 2. Reuse effective API key from running container '$ContainerName' ==="
+            Write-Host 'Local runtime authentication confirmed. The key is not displayed and is used only for this verifier process.'
             $env:THEME_COMPARE_API_KEY = $containerKey
             $temporaryKey = $true
             $containerKey = $null
         }
         else {
+            $containerKey = $null
             Write-Host '=== 2. Enter Theme API key ==='
-            Write-Host 'No key was available in the current session or runtime container.'
+            Write-Host 'No automatically discovered key authenticated against the local runtime.'
             Write-Host 'Input is hidden and is not written to PowerShell command history.'
 
             for ($attempt = 1; $attempt -le 3; $attempt++) {
@@ -87,21 +104,30 @@ try {
                 $bstr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureKey)
                 $plainTextKey = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($bstr)
 
-                if (-not [string]::IsNullOrWhiteSpace($plainTextKey)) {
+                if ([string]::IsNullOrWhiteSpace($plainTextKey)) {
+                    if ($attempt -lt 3) {
+                        Write-Warning 'API key was empty. Enter the current Theme API key; input remains hidden.'
+                    }
+                    continue
+                }
+
+                if (Test-LocalApiKey -ApiKey $plainTextKey) {
                     break
                 }
 
+                $plainTextKey = $null
                 if ($attempt -lt 3) {
-                    Write-Warning 'API key was empty. Enter the current Theme API key; input remains hidden.'
+                    Write-Warning 'That API key did not authenticate against the local Theme runtime. Try again; input remains hidden.'
                 }
             }
 
             if ([string]::IsNullOrWhiteSpace($plainTextKey)) {
-                throw 'THEME_COMPARE_API_KEY was empty after 3 attempts.'
+                throw 'No valid THEME_COMPARE_API_KEY was available after automatic discovery and 3 hidden-input attempts.'
             }
 
             $env:THEME_COMPARE_API_KEY = $plainTextKey
             $temporaryKey = $true
+            Write-Host 'Local runtime authentication confirmed.'
         }
     }
 
