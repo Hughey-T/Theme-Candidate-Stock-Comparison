@@ -19,7 +19,7 @@ Contract 1.0 endpoints remain a legacy completion/read path inside the runtime o
 * source cutoffをUTC instantで厳密単調増加させ、逆行やfuture evidenceを拒否
 * NaN/Infinity、duplicate JSON key、不正UTF-8を拒否するstrict runtime decode
 * atomic persistenceとreadback verification
-* v2 POSTの永続`Idempotency-Key`により同一要求の安全な再送を保証
+* Custom GPTではv2 POSTの必須query parameter `idempotency_key` により同一要求の安全な再送を保証。runtimeは既存クライアント互換のため`Idempotency-Key` headerも受理
 * healthでcontract/API profile/build/schema fingerprintを公開し、接続前に契約不一致を検出
 
 Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Custom GPT Actionの正本は `tools/generate_action_openapi.py` から生成するv2-only OpenAPIです。
@@ -99,7 +99,7 @@ Generatorは `https://host/theme-compare` のような安全なpath prefixをOpe
 
 一度 `local-ai-gateway` networkへ接続されたproduction containerは、以後のruntime更新でも `theme-compare` alias付きnetwork membershipを自動で復元します。
 
-`GET /health`以外は認証されます。v2のsession create / phase submit / update startは`Idempotency-Key`を必須とし、同じkey+payloadの再送は最初の保存済み結果を返します。同じkeyを別payloadへ再利用すると拒否されます。
+`GET /health`以外は認証されます。Custom GPT Actionのv2 session create / phase submit / update startでは必須query parameter `idempotency_key` を使用し、runtimeは後方互換としてqueryまたは`Idempotency-Key` headerのいずれかを受理します。同じkey+payloadの再送は最初の保存済み結果を返します。同じkeyを別payloadへ再利用すると拒否されます。
 
 詳細なruntime更新、共有Gateway ingress、backup、secret rotation、OpenAPI生成、smoke test、rollback手順は [`deploy/README.md`](deploy/README.md) を参照してください。
 
