@@ -18,8 +18,10 @@ if ([string]::IsNullOrWhiteSpace($apiKey)) {
     throw "THEME_COMPARE_API_KEY is required."
 }
 
+$ngrokHeaders = @{ 'ngrok-skip-browser-warning' = '1' }
+
 Write-Host "=== 1. Public readiness ==="
-$health = Invoke-RestMethod -Uri "$publicUrl/health" -TimeoutSec 15
+$health = Invoke-RestMethod -Uri "$publicUrl/health" -Headers $ngrokHeaders -UserAgent 'ThemeCompareVerifier/1.0' -TimeoutSec 15
 if ($health.service -ne 'ok' -or $health.storage -ne 'ok' -or -not $health.ready) {
     throw "Runtime is not ready."
 }
@@ -33,7 +35,7 @@ Write-Host "Runtime ready: contract=$($health.contract_version), build=$($health
 
 Write-Host "=== 2. Unauthenticated request must fail ==="
 try {
-    Invoke-WebRequest -Uri "$publicUrl/v2/sessions/not-a-session/next-contract" -TimeoutSec 15 | Out-Null
+    Invoke-WebRequest -Uri "$publicUrl/v2/sessions/not-a-session/next-contract" -Headers $ngrokHeaders -UserAgent 'ThemeCompareVerifier/1.0' -TimeoutSec 15 | Out-Null
     throw "Unauthenticated request unexpectedly succeeded."
 }
 catch {
@@ -54,7 +56,10 @@ if ($action.paths.PSObject.Properties.Name | Where-Object { $_ -like '/v1/*' }) 
 }
 
 Write-Host "=== 4. Create and safely replay a v2 test session ==="
-$headers = @{ Authorization = "Bearer $apiKey" }
+$headers = @{
+    Authorization = "Bearer $apiKey"
+    'ngrok-skip-browser-warning' = '1'
+}
 $requestId = "smoke-" + [guid]::NewGuid().ToString('N')
 $createHeaders = $headers.Clone()
 $createHeaders['Idempotency-Key'] = $requestId
@@ -86,14 +91,14 @@ $body = @{
     })
 } | ConvertTo-Json -Depth 20 -Compress
 
-$first = Invoke-RestMethod -Method Post -Uri "$publicUrl/v2/sessions" -Headers $createHeaders -ContentType 'application/json' -Body $body -TimeoutSec 30
-$second = Invoke-RestMethod -Method Post -Uri "$publicUrl/v2/sessions" -Headers $createHeaders -ContentType 'application/json' -Body $body -TimeoutSec 30
+$first = Invoke-RestMethod -Method Post -Uri "$publicUrl/v2/sessions" -Headers $createHeaders -UserAgent 'ThemeCompareVerifier/1.0' -ContentType 'application/json' -Body $body -TimeoutSec 30
+$second = Invoke-RestMethod -Method Post -Uri "$publicUrl/v2/sessions" -Headers $createHeaders -UserAgent 'ThemeCompareVerifier/1.0' -ContentType 'application/json' -Body $body -TimeoutSec 30
 if (-not $first.accepted -or $first.session_id -ne $second.session_id) {
     throw "Idempotent session replay failed."
 }
 
 Write-Host "=== 5. Read next contract ==="
-$next = Invoke-RestMethod -Uri "$publicUrl/v2/sessions/$($first.session_id)/next-contract" -Headers $headers -TimeoutSec 15
+$next = Invoke-RestMethod -Uri "$publicUrl/v2/sessions/$($first.session_id)/next-contract" -Headers $headers -UserAgent 'ThemeCompareVerifier/1.0' -TimeoutSec 15
 if ($next.phase -ne 1 -or $next.generation_id -ne 'g1') {
     throw "Unexpected next-contract state."
 }
