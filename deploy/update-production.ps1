@@ -55,6 +55,11 @@ if (-not [string]::IsNullOrWhiteSpace(($gitStatus -join "`n"))) {
     throw 'Working tree has uncommitted changes. Commit/stash them before production update.'
 }
 
+$buildId = (git rev-parse --short HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($buildId)) {
+    throw 'Could not determine git build ID.'
+}
+
 $docker = Get-Command docker -ErrorAction SilentlyContinue
 if ($null -eq $docker) {
     throw 'docker was not found on PATH.'
@@ -84,19 +89,22 @@ if ([string]::IsNullOrWhiteSpace($restartPolicy)) {
 
 $mountArgs = @()
 foreach ($mount in $old.Mounts) {
-    $mode = if ($mount.RW) { 'rw' } else { 'ro' }
     if ($mount.Type -eq 'volume') {
         if ([string]::IsNullOrWhiteSpace([string]$mount.Name)) {
             throw 'Encountered unnamed volume; refusing automatic replacement.'
         }
-        $mountArgs += @('--mount', "type=volume,src=$($mount.Name),dst=$($mount.Destination),$mode")
+        $mountSpec = "type=volume,src=$($mount.Name),dst=$($mount.Destination)"
     }
     elseif ($mount.Type -eq 'bind') {
-        $mountArgs += @('--mount', "type=bind,src=$($mount.Source),dst=$($mount.Destination),$mode")
+        $mountSpec = "type=bind,src=$($mount.Source),dst=$($mount.Destination)"
     }
     else {
         throw "Unsupported mount type '$($mount.Type)'."
     }
+    if (-not $mount.RW) {
+        $mountSpec += ',readonly'
+    }
+    $mountArgs += @('--mount', $mountSpec)
 }
 if ($mountArgs.Count -eq 0) {
     throw 'No persistent mount detected. Refusing to replace the runtime.'
@@ -114,7 +122,9 @@ $rollbackImage = "theme-compare:rollback-$timestamp"
 $rollbackContainer = "$ContainerName-rollback-$timestamp"
 $tempEnv = Join-Path $env:TEMP "theme-compare-env-$([guid]::NewGuid().ToString('N')).txt"
 $replacementStarted = $false
+$oldStopped = $false
 $oldRenamed = $false
+$rollbackImageCreated = $false
 
 try {
     Write-Host '=== 2. Build candidate image ==='
@@ -122,6 +132,7 @@ try {
 
     Write-Host '=== 3. Preserve rollback image ==='
     Invoke-Docker tag $old.Image $rollbackImage
+    $rollbackImageCreated = $true
 
     # Docker does not retain the original --env-file path. Recreate the effective
     # container environment in a temporary local file without printing values.
@@ -129,6 +140,7 @@ try {
 
     Write-Host '=== 4. Stop and preserve old container ==='
     Invoke-Docker stop $ContainerName
+    $oldStopped = $true
     Invoke-Docker rename $ContainerName $rollbackContainer
     $oldRenamed = $true
 
@@ -138,6 +150,7 @@ try {
         '--name', $ContainerName,
         '--restart', $restartPolicy,
         '--env-file', $tempEnv,
+        '-e', "THEME_COMPARE_BUILD_ID=$buildId",
         '-p', '127.0.0.1:8000:8000'
     )
     $runArgs += $mountArgs
@@ -170,8 +183,13 @@ catch {
             & docker start $ContainerName | Out-Null
         }
     }
+    elseif ($oldStopped) {
+        & docker start $ContainerName | Out-Null
+    }
 
-    & docker tag $rollbackImage $ImageName 2>$null | Out-Null
+    if ($rollbackImageCreated) {
+        & docker tag $rollbackImage $ImageName 2>$null | Out-Null
+    }
     Write-Warning 'Rollback attempted. Verify http://127.0.0.1:8000/health before retrying.'
     throw
 }
