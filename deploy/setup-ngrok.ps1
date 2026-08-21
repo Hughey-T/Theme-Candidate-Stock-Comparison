@@ -56,6 +56,58 @@ function Remove-LegacyThemeNgrokStartup {
     }
 }
 
+function Invoke-NgrokHealthWithOverlapRetry {
+    param(
+        [Parameter(Mandatory = $true)][string]$Uri,
+        [Parameter(Mandatory = $true)][hashtable]$Headers,
+        [int]$Attempts = 45,
+        [int]$StableSuccessesRequired = 3
+    )
+
+    $stableSuccesses = 0
+    $lastValue = $null
+    for ($i = 0; $i -lt $Attempts; $i++) {
+        try {
+            $lastValue = Invoke-RestMethod `
+                -Uri $Uri `
+                -Headers $Headers `
+                -UserAgent 'ThemeCompareVerifier/1.0' `
+                -TimeoutSec 15
+            $stableSuccesses++
+            if ($stableSuccesses -ge $StableSuccessesRequired) {
+                return $lastValue
+            }
+            Start-Sleep -Seconds 1
+        }
+        catch {
+            $details = "$($_.Exception.Message)`n$($_.ErrorDetails.Message)"
+            if ($details -match 'ERR_NGROK_6030') {
+                if ($stableSuccesses -gt 0) {
+                    $stableSuccesses = 0
+                }
+                if ($i -eq 0) {
+                    Write-Warning 'ngrok reports overlapping endpoints for the fixed URL (ERR_NGROK_6030). Waiting for the retired endpoint to leave the ngrok control plane; pooling will not be enabled.'
+                }
+                if ($i -lt ($Attempts - 1)) {
+                    Start-Sleep -Seconds 2
+                    continue
+                }
+                $processes = @(Get-CimInstance Win32_Process -Filter "Name='ngrok.exe'" -ErrorAction SilentlyContinue)
+                $processSummary = if ($processes.Count -eq 0) {
+                    'none'
+                }
+                else {
+                    ($processes | ForEach-Object { "PID=$($_.ProcessId) CommandLine=$($_.CommandLine)" }) -join '; '
+                }
+                throw "ERR_NGROK_6030 persisted after automatic retry. A second ngrok endpoint is still online. Local ngrok processes: $processSummary"
+            }
+            throw
+        }
+    }
+
+    throw 'Public Theme health did not remain stable long enough to complete ngrok overlap verification.'
+}
+
 Write-Host '=== 1. Detect ngrok ==='
 $ngrok = Get-Command ngrok -ErrorAction SilentlyContinue
 if ($null -eq $ngrok) {
@@ -131,7 +183,7 @@ if ($InstallStartupTask) {
 
 Write-Host '=== 6. Verify public Theme route ==='
 $ngrokHeaders = @{ 'ngrok-skip-browser-warning' = '1' }
-$publicHealth = Invoke-RestMethod -Uri "$publicUrl/health" -Headers $ngrokHeaders -TimeoutSec 15
+$publicHealth = Invoke-NgrokHealthWithOverlapRetry -Uri "$publicUrl/health" -Headers $ngrokHeaders
 if (
     $publicHealth.service -ne 'ok' -or
     $publicHealth.storage -ne 'ok' -or
