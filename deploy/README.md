@@ -167,7 +167,7 @@ A GPT/runtime deployment mismatch should therefore be detectable before creating
 
 ## Idempotent POSTs
 
-The v2 Action requires `Idempotency-Key` for session creation, phase submission, and update start. Repeating the same logical request with the same key and payload returns the persisted first result. Reusing a key with different payload is rejected. Records live under the same persistent storage root and survive runtime restarts.
+The v2 Custom GPT Action requires the `idempotency_key` query parameter for session creation, phase submission, and update start. The runtime also accepts the legacy `Idempotency-Key` header for backwards compatibility; either form is sufficient, and if both are supplied they must agree. Repeating the same logical request with the same key and payload returns the persisted first result. Reusing a key with different payload is rejected. Records live under the same persistent storage root and survive runtime restarts.
 
 ## Adding future local systems
 
