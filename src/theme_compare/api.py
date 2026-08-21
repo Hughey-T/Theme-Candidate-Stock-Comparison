@@ -76,6 +76,16 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
         request.state.phase = value.get("phase")
         return value
 
+    def resolve_idempotency_key(query_key: str | None, header_key: str | None) -> str:
+        if query_key and header_key and query_key != header_key:
+            raise SemanticError("conflicting idempotency keys")
+        key = query_key or header_key
+        if not key:
+            raise SemanticError("idempotency key is required")
+        if not 8 <= len(key) <= 200:
+            raise SemanticError("idempotency key must be between 8 and 200 characters")
+        return key
+
     def error_content(
         request: Request,
         exc: Exception,
@@ -240,12 +250,12 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
     )
     async def create_v2(
         request: Request,
-        idempotency_key: str = Header(..., alias="Idempotency-Key"),
+        idempotency_key: str | None = Query(None),
+        idempotency_header: str | None = Header(None, alias="Idempotency-Key"),
     ) -> dict[str, Any]:
         payload = await body(request)
-        return idempotency.execute(
-            "v2:create", idempotency_key, payload, lambda: v2.create(payload)
-        )
+        key = resolve_idempotency_key(idempotency_key, idempotency_header)
+        return idempotency.execute("v2:create", key, payload, lambda: v2.create(payload))
 
     @app.get(
         "/v2/sessions/{session_id}/next-contract",
@@ -263,13 +273,13 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
     async def submit_v2(
         session_id: str,
         request: Request,
-        idempotency_key: str = Header(..., alias="Idempotency-Key"),
+        idempotency_key: str | None = Query(None),
+        idempotency_header: str | None = Header(None, alias="Idempotency-Key"),
     ) -> dict[str, Any]:
         payload = await body(request)
+        key = resolve_idempotency_key(idempotency_key, idempotency_header)
         scope = f"v2:submit:{session_id}:{payload.get('generation_id')}:{payload.get('phase')}"
-        return idempotency.execute(
-            scope, idempotency_key, payload, lambda: v2.submit(session_id, payload)
-        )
+        return idempotency.execute(scope, key, payload, lambda: v2.submit(session_id, payload))
 
     @app.post(
         "/v2/sessions/{session_id}/updates",
@@ -279,12 +289,14 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
     async def update_v2(
         session_id: str,
         request: Request,
-        idempotency_key: str = Header(..., alias="Idempotency-Key"),
+        idempotency_key: str | None = Query(None),
+        idempotency_header: str | None = Header(None, alias="Idempotency-Key"),
     ) -> dict[str, Any]:
         payload = await body(request)
+        key = resolve_idempotency_key(idempotency_key, idempotency_header)
         return idempotency.execute(
             f"v2:update:{session_id}",
-            idempotency_key,
+            key,
             payload,
             lambda: v2.start_update(session_id, payload),
         )
