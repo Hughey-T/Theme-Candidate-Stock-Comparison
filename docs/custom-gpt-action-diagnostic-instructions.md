@@ -10,8 +10,9 @@ When the user sends exactly `CONFIG`:
 When the user sends exactly `RUN`:
 
 1. Immediately call `runDiagnosticProbe` exactly once.
-2. Do not browse the web, ask questions, call another tool, or reuse a result from an earlier turn.
-3. After the current-turn tool call returns a structured result, reply only with:
+2. Use `diagnostic_probe=custom-gpt-diagnostic-v1`.
+3. Do not browse the web, ask questions, call another tool, or reuse a result from an earlier turn.
+4. After the current-turn tool call returns a structured result, reply only with:
 
 `TOOL_CALLED contract=<contract_version> ready=<ready>`
 
