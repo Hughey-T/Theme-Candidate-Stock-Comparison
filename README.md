@@ -38,22 +38,25 @@ pytest -q
 
 1. `.env.example`から長いBearer secretと永続volumeを設定します。
 2. Docker Linux containerとしてruntimeを起動します。
-3. Cloudflare Named Tunnel等で**固定HTTPSホスト名**を `127.0.0.1:8000` へ接続します。`trycloudflare.com` Quick Tunnelはproductionでは使用しません。
+3. Windowsでは `deploy/setup-ngrok.ps1` を実行し、ngrok Freeの固定Development Domainを `127.0.0.1:8000` へ接続します。Cloudflare Named Tunnelは代替構成として利用できます。`trycloudflare.com` Quick Tunnelはproductionでは使用しません。
 4. 固定URLからv2-only Action Schemaを生成します。
 
-```bash
-python tools/generate_action_openapi.py \
-  --server-url https://theme-compare.your-domain.example \
-  --output openapi/custom-gpt-action.v2.openapi.json
+```powershell
+.\deploy\setup-ngrok.ps1 -InstallStartupTask
+python .\tools\generate_action_openapi.py `
+  --server-url $env:THEME_COMPARE_PUBLIC_URL `
+  --output .\openapi\custom-gpt-action.v2.openapi.json
 ```
+
+`setup-ngrok.ps1` は既存ngrokのインストール・config/authenticationを確認し、既存endpointを再利用または `ngrok http 8000` を起動してpublic HTTPS URLを検出します。authtokenは読み出し・出力・リポジトリ保存しません。`-InstallStartupTask` を付けると現在のユーザーのWindowsログオン時にngrokを起動するタスクも作成します。
 
 5. 生成ファイルをCustom GPT Actionsへimportし、Bearer API keyを設定します。
 6. `docs/custom-gpt-production-instructions.md`をGPT Instructionsへ反映します。
-7. Windowsでは環境変数を設定して `./deploy/verify-production.ps1` を実行し、`READY: Theme Candidate Stock Comparison v2` を確認します。
+7. `$env:THEME_COMPARE_API_KEY` を設定して `./deploy/verify-production.ps1` を実行し、`READY: Theme Candidate Stock Comparison v2` を確認します。
 
 `GET /health`以外は認証されます。v2のsession create / phase submit / update startは`Idempotency-Key`を必須とし、同じkey+payloadの再送は最初の保存済み結果を返します。同じkeyを別payloadへ再利用すると拒否されます。
 
-詳細な固定Tunnel、backup、secret rotation、OpenAPI生成、smoke test、rollback手順は [`deploy/README.md`](deploy/README.md) を参照してください。
+詳細なngrok bootstrap、自動起動、Cloudflare代替構成、backup、secret rotation、OpenAPI生成、smoke test、rollback手順は [`deploy/README.md`](deploy/README.md) を参照してください。
 
 ### Windows / Docker Desktop
 
@@ -65,6 +68,7 @@ Docker build -t theme-compare:latest .
 Docker run -d --name theme-compare --restart unless-stopped --env-file .env `
   -p 127.0.0.1:8000:8000 -v theme-compare-data:/data/sessions theme-compare:latest
 Invoke-RestMethod http://127.0.0.1:8000/health
+.\deploy\setup-ngrok.ps1 -InstallStartupTask
 ```
 
 本runtimeは投資助言、具体的買値、分割購入、損切り、注文執行、自動売買を提供しません。
