@@ -116,9 +116,13 @@ $latest = $recent[-1]
 Write-Host ('Latest status: ' + $latest.Status)
 
 switch ($latest.Status) {
+    200 {
+        Write-Host 'DIAGNOSIS: a recent session-create request reached the runtime and succeeded with the Action-compatible HTTP 200 response.'
+        exit 0
+    }
     201 {
-        Write-Host 'DIAGNOSIS: a recent session-create request reached the runtime and succeeded.'
-        Write-Host 'If the GPT still reported an API error, the next target is Action response handling rather than session creation.'
+        Write-Host 'DIAGNOSIS: session creation succeeded, but this runtime still uses the legacy HTTP 201 response.'
+        Write-Host 'Update production to the current build before the next live Custom GPT Action test.'
         exit 0
     }
     401 {
