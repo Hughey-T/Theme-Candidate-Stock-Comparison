@@ -15,6 +15,7 @@ from theme_compare.action_openapi import build_document  # noqa: E402
 
 DEFAULT_OUTPUT = Path("openapi/custom-gpt-action.diagnostic.openapi.json")
 TARGET_PATH = "/health"
+PROBE_VALUE = "custom-gpt-diagnostic-v1"
 
 
 def build_diagnostic_document(server_url: str) -> dict[str, object]:
@@ -28,6 +29,15 @@ def build_diagnostic_document(server_url: str) -> dict[str, object]:
         "Diagnostic-only operation. When the user message is exactly RUN, invoke this GET "
         "immediately. Do not ask what to run."
     )
+    operation["parameters"] = [
+        {
+            "name": "diagnostic_probe",
+            "in": "query",
+            "required": True,
+            "description": "Always use the only allowed marker value for this diagnostic probe.",
+            "schema": {"type": "string", "enum": [PROBE_VALUE]},
+        }
+    ]
     document["paths"] = {TARGET_PATH: {"get": operation}}
     document["servers"] = [{"url": public_base}]
     document["security"] = []
