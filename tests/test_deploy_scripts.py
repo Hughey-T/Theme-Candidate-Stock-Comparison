@@ -52,17 +52,19 @@ def test_ngrok_script_accepts_current_free_domain_suffixes() -> None:
     assert "\\.ngrok(-free)?\\.(app|dev)$" in text
 
 
-def test_ngrok_script_falls_back_to_current_user_startup() -> None:
+def test_ngrok_script_uses_permissionless_current_user_startup() -> None:
     text = NGROK_SCRIPT.read_text(encoding="utf-8")
 
     required = [
-        "Windows Task Scheduler registration was denied or unavailable",
         "[Environment]::GetFolderPath('Startup')",
         "ThemeCandidateStockComparison-ngrok.lnk",
-        "administrator elevation is not required",
+        "Install-NgrokStartupShortcut -NgrokPath $ngrok.Source",
+        "-ExecutionPolicy Bypass -WindowStyle Hidden",
     ]
     for marker in required:
         assert marker in text
+
+    assert "schtasks.exe" not in text
 
 
 def test_ngrok_public_health_requires_v2_fingerprint() -> None:
