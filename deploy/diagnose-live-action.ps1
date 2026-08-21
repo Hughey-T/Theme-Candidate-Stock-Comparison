@@ -23,9 +23,12 @@ if ($LASTEXITCODE -ne 0) {
 $entries = @()
 foreach ($line in $raw) {
     $text = [string]$line
+    # Custom GPT mutating Actions use idempotency_key in the query string.
+    # Match both legacy header-based requests (no query) and Action requests
+    # without printing the query value, request body, Authorization header, or API key.
     $match = [regex]::Match(
         $text,
-        '^(?<timestamp>\S+)\s+.*POST /v2/sessions HTTP/[0-9.]+"\s+(?<status>\d{3})'
+        '^(?<timestamp>\S+)\s+.*POST /v2/sessions(?:\?[^ ]*)? HTTP/[0-9.]+"\s+(?<status>\d{3})'
     )
     if ($match.Success) {
         $entries += [pscustomobject]@{
@@ -39,7 +42,7 @@ if ($entries.Count -eq 0) {
     Write-Host 'LIVE ACTION DIAGNOSTIC: no recent POST /v2/sessions reached the runtime.'
     Write-Host "Window: $Since"
     Write-Host 'If the Custom GPT just reported an API error, the failure happened before the request reached this runtime.'
-    Write-Host 'No request body, Authorization header, or API key was inspected.'
+    Write-Host 'No query value, request body, Authorization header, or API key was printed.'
     exit 2
 }
 
