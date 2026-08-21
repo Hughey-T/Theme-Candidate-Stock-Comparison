@@ -79,7 +79,9 @@ def normalize_action_schema(
     return value
 
 
-def phase_artifact_components() -> tuple[dict[str, object], dict[str, dict[str, object]]]:
+def phase_artifact_components() -> tuple[
+    dict[str, object], dict[str, dict[str, object]]
+]:
     raw = load_schema("comparison-contract-v2.schema.json")
     raw_defs = raw.pop("$defs", {})
     if not isinstance(raw_defs, dict):
@@ -375,7 +377,9 @@ def _paths() -> dict[str, object]:
 def build_document(server_url: str) -> dict[str, object]:
     phase_artifact, phase_components = phase_artifact_components()
     schemas: dict[str, object] = {
-        "CandidateIdentity": normalize_action_schema(load_schema("normalized-candidate.schema.json")),
+        "CandidateIdentity": normalize_action_schema(
+            load_schema("normalized-candidate.schema.json")
+        ),
         "Horizon": _horizon_schema(),
         "FlexibleHandoff": {
             "type": "object",
