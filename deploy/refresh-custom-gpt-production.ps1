@@ -30,8 +30,8 @@ try {
 
     Write-Host '=== 5. Manual finish ==='
     Write-Host 'In GPT Builder: main Instructions -> Ctrl+A -> Ctrl+V, then save/update the GPT.'
-    Write-Host 'Start a NEW conversation and test: GEV・ETN・PWR・VRT'
-    Write-Host 'If Phase 1 succeeds, send: 次'
+    Write-Host 'Start a NEW conversation and test the four tickers: GEV, ETN, PWR, VRT.'
+    Write-Host 'If Phase 1 succeeds, send the normal continuation command used by this GPT.'
     Write-Host 'CUSTOM GPT REFRESH READY'
 }
 finally {
