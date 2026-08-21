@@ -34,3 +34,12 @@ def test_diagnostic_openapi_exposes_only_health_probe(tmp_path: Path) -> None:
     assert operation["security"] == []
     assert "RUN" in operation["summary"]
     assert "Do not ask what to run" in operation["description"]
+    assert operation["parameters"] == [
+        {
+            "name": "diagnostic_probe",
+            "in": "query",
+            "required": True,
+            "description": "Always use the only allowed marker value for this diagnostic probe.",
+            "schema": {"type": "string", "enum": ["custom-gpt-diagnostic-v1"]},
+        }
+    ]
