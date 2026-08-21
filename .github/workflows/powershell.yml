@@ -22,7 +22,8 @@ jobs:
             'deploy/refresh-custom-gpt-production.ps1',
             'deploy/prepare-custom-gpt-action-diagnostic.ps1',
             'deploy/prepare-custom-gpt-full-schema-diagnostic.ps1',
-            'deploy/diagnose-custom-gpt-action-probe.ps1'
+            'deploy/diagnose-custom-gpt-action-probe.ps1',
+            'deploy/diagnose-latest-v2-progress.ps1'
           )
           foreach ($file in $files) {
             $errors = $null
