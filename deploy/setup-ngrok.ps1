@@ -130,7 +130,8 @@ if ($InstallStartupTask) {
 }
 
 Write-Host '=== 6. Verify public Theme route ==='
-$publicHealth = Invoke-RestMethod -Uri "$publicUrl/health" -TimeoutSec 15
+$ngrokHeaders = @{ 'ngrok-skip-browser-warning' = '1' }
+$publicHealth = Invoke-RestMethod -Uri "$publicUrl/health" -Headers $ngrokHeaders -TimeoutSec 15
 if (
     $publicHealth.service -ne 'ok' -or
     $publicHealth.storage -ne 'ok' -or
@@ -143,4 +144,4 @@ if (
 }
 
 Write-Host 'NGROK READY'
-Write-Host "Next: `$env:THEME_COMPARE_API_KEY = '<secret>'; .\deploy\verify-production.ps1"
+Write-Host "Next: run .\deploy\finalize-production.ps1 to verify production without placing the API key in command history."
