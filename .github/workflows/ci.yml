@@ -26,8 +26,6 @@ jobs:
         with: {python-version: '3.13'}
       - run: PIP_CONSTRAINT=constraints-dev.txt python -m pip install -e '.[dev]'
       - run: ruff check .
-      - name: Show Action OpenAPI formatter diff
-        run: ruff format --diff src/theme_compare/action_openapi.py || true
       - run: ruff format --check .
       - run: mypy src
       - name: Schema samples and representative mutation suite
