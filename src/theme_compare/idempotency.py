@@ -7,7 +7,7 @@ import json
 import os
 import tempfile
 from pathlib import Path
-from typing import Any, Callable, TypeVar
+from typing import Any, Callable, TypeVar, cast
 
 from .models import SemanticError, strict_json_loads
 from .storage import StorageError
@@ -80,7 +80,7 @@ class IdempotencyStore:
                         result = record.get("result")
                         if not isinstance(result, dict):
                             raise StorageError("invalid idempotency result")
-                        return result
+                        return cast(T, result)
 
                     result = operation()
                     record = {
