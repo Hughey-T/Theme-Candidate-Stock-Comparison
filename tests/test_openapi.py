@@ -42,6 +42,16 @@ def resolve(doc, schema):
     return doc["components"]["schemas"][name]
 
 
+def walk(value):
+    yield value
+    if isinstance(value, dict):
+        for item in value.values():
+            yield from walk(item)
+    elif isinstance(value, list):
+        for item in value:
+            yield from walk(item)
+
+
 def test_v2_only_openapi_has_exact_unique_operations():
     doc = document()
     assert doc["openapi"] == "3.1.0"
@@ -87,6 +97,33 @@ def test_all_component_schemas_are_valid_draft_202012():
     doc = document()
     for schema in doc["components"]["schemas"].values():
         Draft202012Validator.check_schema(schema)
+
+
+def test_action_schema_avoids_editor_incompatible_nested_defs():
+    doc = document()
+    for node in walk(doc):
+        if isinstance(node, dict):
+            assert "$defs" not in node
+            ref = node.get("$ref")
+            if isinstance(ref, str):
+                assert "/$defs/" not in ref
+
+    phase = doc["components"]["schemas"]["BlindPhaseArtifactV2"]
+    assert phase["properties"]["information"]["items"] == {
+        "$ref": "#/components/schemas/BlindPhaseInformation"
+    }
+    assert "BlindPhaseInformation" in doc["components"]["schemas"]
+
+
+def test_all_action_object_schemas_declare_properties():
+    doc = document()
+    for node in walk(doc["components"]["schemas"]):
+        if isinstance(node, dict) and node.get("type") == "object":
+            assert "properties" in node
+
+    flexible = doc["components"]["schemas"]["FlexibleHandoff"]
+    assert flexible["properties"] == {}
+    assert flexible["additionalProperties"] is True
 
 
 def test_action_routes_exist_in_fastapi(tmp_path):
