@@ -12,6 +12,7 @@ from theme_compare.storage import JsonVolumeStorage
 EXPECTED_OPERATION_IDS = {
     "getRuntimeHealth",
     "createBlindComparisonSessionV2",
+    "recoverBlindComparisonSessionV2",
     "getBlindPhaseContractV2",
     "submitBlindPhaseV2",
     "startBlindComparisonUpdateV2",
@@ -91,6 +92,14 @@ def test_v2_mutating_operations_require_action_safe_idempotency_query_key():
         ]
         assert len(matches) == 1
         assert matches[0]["required"] is True
+
+
+def test_v2_action_create_and_recovery_use_http_200():
+    doc = document()
+    create_responses = doc["paths"]["/v2/sessions"]["post"]["responses"]
+    recovery_responses = doc["paths"]["/v2/session-create-result"]["get"]["responses"]
+    assert "200" in create_responses and "201" not in create_responses
+    assert "200" in recovery_responses
 
 
 def test_action_openapi_declares_no_custom_header_parameters():
