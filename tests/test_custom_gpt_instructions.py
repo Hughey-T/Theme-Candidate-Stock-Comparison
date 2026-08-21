@@ -10,6 +10,7 @@ INSTRUCTION_FILES = [
 REQUIRED_V2_OPERATIONS = {
     "getRuntimeHealth",
     "createBlindComparisonSessionV2",
+    "recoverBlindComparisonSessionV2",
     "getBlindPhaseContractV2",
     "submitBlindPhaseV2",
     "startBlindComparisonUpdateV2",
@@ -35,6 +36,7 @@ def test_custom_gpt_instructions_pin_v2_action_flow() -> None:
     assert "旧v1 Actionが無いこと自体を停止理由にしてはいけない" in text
     assert "query parameter `idempotency_key`" in text
     assert "`Idempotency-Key` ヘッダーを要求しない" in text
+    assert "同じ `idempotency_key` で `recoverBlindComparisonSessionV2` を1回だけ呼ぶ" in text
 
 
 def test_custom_gpt_instructions_forbid_legacy_startup_contract() -> None:
