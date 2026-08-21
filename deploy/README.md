@@ -8,7 +8,7 @@ Default production ingress is:
 
 Cloudflare Named Tunnel remains a supported alternative when an independent domain/DNS setup is preferred. Do **not** use Quick Tunnel / `trycloudflare.com` for production. The Action server hostname must remain stable across container, tunnel-agent, and machine restarts.
 
-ngrok Free accounts include an account-assigned Development Domain whose URL remains fixed across agent restarts. Current ngrok-branded development domains may use `ngrok-free.app` or `ngrok-free.dev`. This is sufficient for the personal Custom GPT integration as long as account limits are acceptable.
+ngrok Free accounts include one account-assigned Development Domain. Current ngrok-branded development domains may use `ngrok-free.app` or `ngrok-free.dev`. If that single Development Domain is already used by another local service, do not repoint or share it implicitly: Theme Comparison needs a separate stable ingress (for example an additional paid ngrok-branded domain or an independent stable ingress such as a Cloudflare Named Tunnel). The bootstrap script refuses to reuse an ngrok tunnel unless its upstream is actually port 8000.
 
 ## Runtime startup
 
@@ -51,7 +51,7 @@ On success it prints:
 
 The stopped rollback container/image are intentionally retained after a successful update. Remove old rollback artifacts only as a separate deliberate maintenance operation after confirming the new runtime and persisted state; never remove the persistent data volume.
 
-## Default ingress: ngrok Free Development Domain
+## Default ingress: ngrok Development Domain
 
 On Windows, after the runtime is healthy on `http://127.0.0.1:8000`, run:
 
@@ -64,7 +64,9 @@ The bootstrap script:
 - discovers the existing `ngrok` executable on PATH
 - validates the existing ngrok config/authentication
 - refuses to proceed unless the local runtime is ready
-- reuses an already-running ngrok HTTPS endpoint or starts `ngrok http 8000`
+- reuses an existing ngrok HTTPS endpoint **only when its upstream is port 8000**
+- refuses to hijack or reinterpret a tunnel that belongs to another local service
+- starts `ngrok http 8000` only when no other HTTPS ngrok endpoint is already active in the local agent
 - accepts current ngrok development-domain suffixes including `ngrok-free.app` and `ngrok-free.dev`
 - discovers the public HTTPS URL from the local ngrok API
 - saves `THEME_COMPARE_PUBLIC_URL` as a user environment variable
@@ -72,17 +74,27 @@ The bootstrap script:
 
 It does not read, print, copy, or commit an ngrok authtoken. If the machine has never been authenticated, ngrok itself must first be configured with `ngrok config add-authtoken <YOUR_AUTHTOKEN>`.
 
-To configure automatic ngrok startup after Windows sign-in:
+To configure automatic ngrok startup after Windows sign-in, use:
 
 ```powershell
 .\deploy\setup-ngrok.ps1 -InstallStartupTask
 ```
 
-The script first attempts a current-user Task Scheduler registration. If local Windows policy rejects that registration, it falls back to a hidden launcher shortcut in the current user's Startup folder, which does not require administrator elevation. Failure to use Task Scheduler therefore does not block public health verification.
+For compatibility the switch retains its historical name, but the implementation uses a hidden launcher shortcut in the current user's Startup folder and does not require administrator elevation. The launcher only treats an HTTPS tunnel whose upstream is port 8000 as Theme Comparison; if another HTTPS tunnel is already active, it exits instead of attempting to steal the other service's endpoint.
 
 The Docker runtime already uses `--restart unless-stopped`; Docker Desktop itself must be configured to start with Windows for full automatic recovery after a reboot.
 
 The ngrok endpoint is an ingress only. Runtime authentication still requires the Theme Comparison Bearer API key, so exposing the endpoint does not bypass API authentication.
+
+### When the ngrok Free Development Domain is already occupied
+
+A Free account has one Development Domain. If `http://127.0.0.1:4040/api/tunnels` shows that domain pointing to another local service (for example an orchestrator on port 8787), keep that endpoint unchanged. Theme Comparison then requires one of these separate stable ingress choices:
+
+- an additional ngrok-branded domain on a plan that supports it, explicitly mapped to `http://127.0.0.1:8000`
+- a Cloudflare Named Tunnel on a stable hostname you control
+- another stable HTTPS reverse proxy whose hostname does not change across restarts
+
+Do not use a random/ephemeral URL for the Custom GPT Action, and do not repoint an existing service's stable endpoint just to make Theme Comparison pass verification.
 
 ## Alternative ingress: Cloudflare Named Tunnel
 
@@ -114,7 +126,7 @@ Import `openapi/custom-gpt-action.v2.openapi.json` in GPT editor -> Configure ->
 
 ## One-command production verification (Windows)
 
-After `setup-ngrok.ps1`, set only the runtime API key in the current shell and run:
+After a stable ingress is configured, set only the runtime API key in the current shell and run:
 
 ```powershell
 $env:THEME_COMPARE_API_KEY = '<secret>'
@@ -178,12 +190,9 @@ Docker run -d --name theme-compare --restart unless-stopped --env-file .env `
   -e THEME_COMPARE_BUILD_ID=$(git rev-parse --short HEAD) `
   -p 127.0.0.1:8000:8000 -v theme-compare-data:/data/sessions theme-compare:latest
 Invoke-RestMethod http://127.0.0.1:8000/health
-.\deploy\setup-ngrok.ps1 -InstallStartupTask
 ```
 
 For subsequent code updates, run `deploy/update-production.ps1` instead of manually stopping/removing/recreating the production container.
-
-If Task Scheduler registration is blocked by local Windows policy, `setup-ngrok.ps1 -InstallStartupTask` automatically falls back to the current user's Startup folder. The account-assigned Development Domain remains the same.
 
 ## Contract 2.0 rollout and rollback
 
