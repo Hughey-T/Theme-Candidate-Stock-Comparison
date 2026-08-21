@@ -245,7 +245,6 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
     @app.post(
         "/v2/sessions",
         dependencies=[Depends(authorize)],
-        status_code=201,
         operation_id="createBlindComparisonSessionV2",
     )
     async def create_v2(
