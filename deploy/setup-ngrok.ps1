@@ -21,6 +21,54 @@ function Get-NgrokTunnelUrl {
     return [string]$httpsTunnel.public_url
 }
 
+function Install-NgrokStartupShortcut {
+    param(
+        [Parameter(Mandatory = $true)][string]$NgrokPath
+    )
+
+    $appDir = Join-Path $env:LOCALAPPDATA 'ThemeCandidateStockComparison'
+    New-Item -ItemType Directory -Path $appDir -Force | Out-Null
+
+    $launcherPath = Join-Path $appDir 'start-ngrok.ps1'
+    $stdoutPath = Join-Path $appDir 'ngrok.stdout.log'
+    $stderrPath = Join-Path $appDir 'ngrok.stderr.log'
+
+    $ngrokLiteral = $NgrokPath.Replace("'", "''")
+    $stdoutLiteral = $stdoutPath.Replace("'", "''")
+    $stderrLiteral = $stderrPath.Replace("'", "''")
+    $launcher = @"
+`$ErrorActionPreference = 'SilentlyContinue'
+try {
+    `$response = Invoke-RestMethod -Uri 'http://127.0.0.1:4040/api/tunnels' -TimeoutSec 2
+    `$existing = `$response.tunnels | Where-Object { `$_.public_url -match '^https://' } | Select-Object -First 1
+    if (`$null -ne `$existing) {
+        exit 0
+    }
+}
+catch {
+}
+Start-Process -FilePath '$ngrokLiteral' -ArgumentList @('http', '8000') -WindowStyle Hidden -RedirectStandardOutput '$stdoutLiteral' -RedirectStandardError '$stderrLiteral' | Out-Null
+"@
+    Set-Content -LiteralPath $launcherPath -Value $launcher -Encoding UTF8
+
+    $startupDir = [Environment]::GetFolderPath('Startup')
+    if ([string]::IsNullOrWhiteSpace($startupDir)) {
+        throw 'Windows Startup folder could not be resolved.'
+    }
+
+    $powershell = (Get-Command powershell.exe -ErrorAction Stop).Source
+    $shortcutPath = Join-Path $startupDir 'ThemeCandidateStockComparison-ngrok.lnk'
+    $shell = New-Object -ComObject WScript.Shell
+    $shortcut = $shell.CreateShortcut($shortcutPath)
+    $shortcut.TargetPath = $powershell
+    $shortcut.Arguments = "-NoProfile -ExecutionPolicy Bypass -WindowStyle Hidden -File `"$launcherPath`""
+    $shortcut.WorkingDirectory = $appDir
+    $shortcut.WindowStyle = 7
+    $shortcut.Save()
+
+    Write-Host "Startup shortcut installed: $shortcutPath"
+}
+
 Write-Host '=== 1. Detect ngrok ==='
 $ngrok = Get-Command ngrok -ErrorAction SilentlyContinue
 if ($null -eq $ngrok) {
@@ -77,7 +125,7 @@ if ($publicUrl -notmatch '^https://') {
 if ($publicUrl -match 'trycloudflare\.com|example\.(com|org|net)|\.invalid') {
     throw "Refusing ephemeral or placeholder endpoint: $publicUrl"
 }
-if ($publicUrl -notmatch '\.ngrok(-free)?\.app$') {
+if ($publicUrl -notmatch '\.ngrok(-free)?\.(app|dev)$') {
     Write-Warning "Endpoint is not an ngrok-branded development domain: $publicUrl. Verify that it is intentionally stable before importing it into Custom GPT."
 }
 
@@ -87,21 +135,32 @@ Write-Host "Public URL: $publicUrl"
 Write-Host 'Saved THEME_COMPARE_PUBLIC_URL as a user environment variable.'
 
 if ($InstallStartupTask) {
-    Write-Host '=== 5. Install current-user startup task ==='
+    Write-Host '=== 5. Install current-user startup ==='
     $taskName = 'ThemeCandidateStockComparison-ngrok'
     $escapedExe = $ngrok.Source.Replace('"', '""')
     $taskCommand = '"' + $escapedExe + '" http 8000'
-    schtasks.exe /Create /F /SC ONLOGON /TN $taskName /TR $taskCommand | Out-Host
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Failed to install the ngrok startup task. Re-run PowerShell with sufficient permissions or start ngrok manually.'
+    $taskOutput = & schtasks.exe /Create /F /SC ONLOGON /TN $taskName /TR $taskCommand 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $taskOutput | Out-Host
+        Write-Host "Startup task installed: $taskName"
     }
-    Write-Host "Startup task installed: $taskName"
+    else {
+        Write-Warning 'Windows Task Scheduler registration was denied or unavailable. Falling back to the current-user Startup folder; administrator elevation is not required for this fallback.'
+        Install-NgrokStartupShortcut -NgrokPath $ngrok.Source
+    }
 }
 
 Write-Host '=== 6. Verify public health ==='
 $publicHealth = Invoke-RestMethod -Uri "$publicUrl/health" -TimeoutSec 15
-if ($publicHealth.service -ne 'ok' -or $publicHealth.storage -ne 'ok' -or -not $publicHealth.ready) {
-    throw 'Public ngrok endpoint reached the runtime, but the runtime is not ready.'
+if (
+    $publicHealth.service -ne 'ok' -or
+    $publicHealth.storage -ne 'ok' -or
+    -not $publicHealth.ready -or
+    $publicHealth.contract_version -ne '2.0.0' -or
+    $publicHealth.api_profile -ne 'custom-gpt-v2' -or
+    [string]::IsNullOrWhiteSpace([string]$publicHealth.schema_sha256)
+) {
+    throw 'Public ngrok endpoint reached the runtime, but the runtime does not satisfy the v2 production health contract.'
 }
 
 Write-Host 'NGROK READY'
