@@ -125,18 +125,21 @@ def validate_server_url(value: str) -> str:
     return value.rstrip("/")
 
 
-def response(description: str) -> dict[str, object]:
+def response(description: str, schema_name: str = "GenericResponse") -> dict[str, object]:
     return {
         "description": description,
         "content": {
-            "application/json": {"schema": {"$ref": "#/components/schemas/GenericResponse"}}
+            "application/json": {"schema": {"$ref": f"#/components/schemas/{schema_name}"}}
         },
     }
 
 
-def standard_responses(success: str = "200") -> dict[str, object]:
+def standard_responses(
+    success: str = "200",
+    success_schema: str = "GenericResponse",
+) -> dict[str, object]:
     return {
-        success: response("Success"),
+        success: response("Success", success_schema),
         "401": response("Authentication failure"),
         "404": response("Session not found"),
         "422": response("Validation or transition failure"),
@@ -233,6 +236,32 @@ def _create_request_schema() -> dict[str, object]:
     }
 
 
+def _create_response_schema() -> dict[str, object]:
+    return {
+        "type": "object",
+        "additionalProperties": False,
+        "required": [
+            "accepted",
+            "session_id",
+            "generation_id",
+            "next_phase",
+            "candidate_order",
+            "contract_version",
+        ],
+        "properties": {
+            "accepted": {"type": "boolean"},
+            "session_id": {"type": "string", "pattern": "^s_[0-9a-f]{32}$"},
+            "generation_id": {"type": "string"},
+            "next_phase": {"type": "integer"},
+            "candidate_order": {
+                "type": "array",
+                "items": {"type": "string"},
+            },
+            "contract_version": {"type": "string", "const": "2.0.0"},
+        },
+    }
+
+
 def _update_request_schema() -> dict[str, object]:
     return {
         "type": "object",
@@ -295,6 +324,7 @@ def _generic_response_schema() -> dict[str, object]:
 def _paths() -> dict[str, object]:
     session = session_parameter
     idem = idempotency_parameter
+    create_responses = standard_responses(success_schema="CreateBlindComparisonSessionV2Response")
     return {
         "/health": {
             "get": {
@@ -310,7 +340,7 @@ def _paths() -> dict[str, object]:
                 "summary": "Create a contract 2.0 comparison session",
                 "parameters": [idem()],
                 "requestBody": request_body("CreateBlindComparisonSessionV2Request"),
-                "responses": standard_responses(),
+                "responses": create_responses,
             }
         },
         "/v2/session-create-result": {
@@ -318,7 +348,7 @@ def _paths() -> dict[str, object]:
                 "operationId": "recoverBlindComparisonSessionV2",
                 "summary": "Recover a completed create-session result by idempotency key",
                 "parameters": [idem()],
-                "responses": standard_responses(),
+                "responses": create_responses,
             }
         },
         "/v2/sessions/{session_id}/next-contract": {
@@ -395,6 +425,7 @@ def build_document(server_url: str) -> dict[str, object]:
             "properties": {},
         },
         "CreateBlindComparisonSessionV2Request": _create_request_schema(),
+        "CreateBlindComparisonSessionV2Response": _create_response_schema(),
         "BlindPhaseArtifactV2": phase_artifact,
         **phase_components,
         "StartBlindComparisonUpdateV2Request": _update_request_schema(),
