@@ -313,6 +313,14 @@ def _paths() -> dict[str, object]:
                 "responses": standard_responses(),
             }
         },
+        "/v2/session-create-result": {
+            "get": {
+                "operationId": "recoverBlindComparisonSessionV2",
+                "summary": "Recover a completed create-session result by idempotency key",
+                "parameters": [idem()],
+                "responses": standard_responses(),
+            }
+        },
         "/v2/sessions/{session_id}/next-contract": {
             "get": {
                 "operationId": "getBlindPhaseContractV2",
