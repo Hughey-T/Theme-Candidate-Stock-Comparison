@@ -14,12 +14,13 @@ GENERATOR = ROOT / "tools" / "generate_action_openapi.py"
 
 def test_gateway_prefixed_server_url_is_emitted(tmp_path: Path) -> None:
     output = tmp_path / "action.json"
+    public_url = "https://stable.ngrok-free.dev/theme-compare"
     subprocess.run(
         [
             sys.executable,
             str(GENERATOR),
             "--server-url",
-            "https://stable.ngrok-free.dev/theme-compare",
+            public_url,
             "--output",
             str(output),
         ],
@@ -27,9 +28,7 @@ def test_gateway_prefixed_server_url_is_emitted(tmp_path: Path) -> None:
         cwd=ROOT,
     )
     document = json.loads(output.read_text(encoding="utf-8"))
-    assert document["servers"] == [
-        {"url": "https://stable.ngrok-free.dev/theme-compare"}
-    ]
+    assert document["servers"] == [{"url": public_url}]
     assert "/v2/sessions" in document["paths"]
     assert all(not path.startswith("/theme-compare/") for path in document["paths"])
 
