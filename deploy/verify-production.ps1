@@ -97,7 +97,14 @@ if (-not $first.accepted -or $first.session_id -ne $second.session_id) {
     throw "Idempotent session replay failed."
 }
 
-Write-Host "=== 5. Read next contract ==="
+Write-Host "=== 5. Recover create result by idempotency key ==="
+$encodedRequestId = [uri]::EscapeDataString($requestId)
+$recovered = Invoke-RestMethod -Uri "$publicUrl/v2/session-create-result?idempotency_key=$encodedRequestId" -Headers $headers -UserAgent 'ThemeCompareVerifier/1.0' -TimeoutSec 15
+if (-not $recovered.accepted -or $recovered.session_id -ne $first.session_id) {
+    throw "Idempotent session-create recovery failed."
+}
+
+Write-Host "=== 6. Read next contract ==="
 $next = Invoke-RestMethod -Uri "$publicUrl/v2/sessions/$($first.session_id)/next-contract" -Headers $headers -UserAgent 'ThemeCompareVerifier/1.0' -TimeoutSec 15
 if ($next.phase -ne 1 -or $next.generation_id -ne 'g1') {
     throw "Unexpected next-contract state."
