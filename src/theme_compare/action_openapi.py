@@ -96,9 +96,7 @@ def request_body(schema_name: str) -> dict[str, object]:
     return {
         "required": True,
         "content": {
-            "application/json": {
-                "schema": {"$ref": f"#/components/schemas/{schema_name}"}
-            }
+            "application/json": {"schema": {"$ref": f"#/components/schemas/{schema_name}"}}
         },
     }
 
@@ -311,8 +309,7 @@ def build_document(server_url: str) -> dict[str, object]:
             "title": "Theme Candidate Stock Comparison V2",
             "version": "2.0.0",
             "description": (
-                "Canonical v2-only Custom GPT Action contract. "
-                "Legacy v1 is intentionally excluded."
+                "Canonical v2-only Custom GPT Action contract. Legacy v1 is intentionally excluded."
             ),
         },
         "servers": [{"url": server_url}],
