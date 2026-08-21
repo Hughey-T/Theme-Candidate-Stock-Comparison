@@ -54,13 +54,25 @@ python .\tools\generate_action_openapi.py `
 6. `docs/custom-gpt-production-instructions.md`をGPT Instructionsへ反映します。
 7. `$env:THEME_COMPARE_API_KEY` を設定して `./deploy/verify-production.ps1` を実行し、`READY: Theme Candidate Stock Comparison v2` を確認します。
 
+### Safe Windows runtime update
+
+既存のproduction containerを新しいbranch内容へ更新するときは、個別のDocker操作ではなく次を使います。
+
+```powershell
+.\deploy\update-production.ps1
+```
+
+このスクリプトはclean working tree、既存container、`127.0.0.1:8000` のport binding、persistent mountsを確認してからcandidate imageをbuildします。build成功後にのみ旧containerを停止し、旧containerと旧imageをtimestamp付きrollback対象として保持したまま、同じmount・effective environment・restart policyで新containerを起動します。新runtimeがv2 health contractを満たさない場合は旧containerへのrollbackを試みます。volume削除やpruneは行いません。
+
 `GET /health`以外は認証されます。v2のsession create / phase submit / update startは`Idempotency-Key`を必須とし、同じkey+payloadの再送は最初の保存済み結果を返します。同じkeyを別payloadへ再利用すると拒否されます。
 
-詳細なngrok bootstrap、自動起動、Cloudflare代替構成、backup、secret rotation、OpenAPI生成、smoke test、rollback手順は [`deploy/README.md`](deploy/README.md) を参照してください。
+詳細なruntime更新、ngrok bootstrap、自動起動、Cloudflare代替構成、backup、secret rotation、OpenAPI生成、smoke test、rollback手順は [`deploy/README.md`](deploy/README.md) を参照してください。
 
 ### Windows / Docker Desktop
 
 Production runtimeはLinux containerを正式サポート範囲とし、Windowsではnative Python runtimeを直接起動せずDocker DesktopのLinux containers modeを使用します。
+
+初回起動例:
 
 ```powershell
 Copy-Item .env.example .env
@@ -70,5 +82,7 @@ Docker run -d --name theme-compare --restart unless-stopped --env-file .env `
 Invoke-RestMethod http://127.0.0.1:8000/health
 .\deploy\setup-ngrok.ps1 -InstallStartupTask
 ```
+
+以後のコード更新は `deploy/update-production.ps1` を使用してください。
 
 本runtimeは投資助言、具体的買値、分割購入、損切り、注文執行、自動売買を提供しません。
