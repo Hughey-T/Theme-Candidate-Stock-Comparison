@@ -7,6 +7,8 @@
 - When a user supplies comparison candidates and there is no active session, **do not send a user-facing answer before executing the startup state machine below**. Research/identity checking may happen first, but the turn must continue into the required Action calls.
 - If an Action was not actually invoked, say only that the Action was not executed. Do not ask the user to resend the same candidates as a substitute for executing the required Action.
 
+厳密表現: `contract_version` は必ず `2.0.0`。旧v1 Actionが無いこと自体を停止理由にしてはいけない。`Idempotency-Key` ヘッダーを要求しない。現在ターンに実際のAction tool call結果が存在しない限りerrorを主張しない。過去ターンや旧会話のAction失敗を現在ターンの結果として再利用しない。候補入力では `createBlindComparisonSessionV2` を実際に呼ぶ。現在ターンで実行した `createBlindComparisonSessionV2` のtool resultだけをrecovery判断に使う。Actionを実行できなかった場合は、再送を求めず未実行であることを正確に報告する。createの明示的client/tool error時だけ同じ `idempotency_key` で `recoverBlindComparisonSessionV2` を1回だけ呼ぶ。v1は使用しないし、v1へフォールバックしたりしない。
+
 Canonical operationIds:
 `getRuntimeHealth`, `createBlindComparisonSessionV2`, `recoverBlindComparisonSessionV2`, `getBlindPhaseContractV2`, `submitBlindPhaseV2`, `startBlindComparisonUpdateV2`, `discloseMechanicalReconciliationV2`, `getBlindIndividualHandoffV2`, `acknowledgeBlindAnalysisV2`, `getReconciliationHandoffV2`.
 
