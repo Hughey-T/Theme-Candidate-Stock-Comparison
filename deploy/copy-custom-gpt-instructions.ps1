@@ -5,6 +5,7 @@ param(
 )
 
 $ErrorActionPreference = 'Stop'
+$maxInstructionsCharacters = 8000
 
 $resolvedPath = (Resolve-Path -LiteralPath $InstructionsPath).Path
 $utf8 = New-Object System.Text.UTF8Encoding($false, $true)
@@ -12,6 +13,9 @@ $text = [System.IO.File]::ReadAllText($resolvedPath, $utf8)
 
 if ([string]::IsNullOrWhiteSpace($text)) {
     throw "Custom GPT instructions are empty: $resolvedPath"
+}
+if ($text.Length -gt $maxInstructionsCharacters) {
+    throw "Custom GPT instructions exceed the GPT Builder limit: $($text.Length) > $maxInstructionsCharacters characters."
 }
 if ($text -notmatch 'contract 2\.0' -or $text -notmatch 'createBlindComparisonSessionV2') {
     throw 'Expected v2 instruction markers were not found.'
@@ -33,7 +37,8 @@ if (-not $hasJapanese) {
 }
 
 if ($ValidateOnly) {
-    Write-Host 'CUSTOM GPT INSTRUCTIONS UTF-8 VALID'
+    Write-Host 'CUSTOM GPT INSTRUCTIONS VALID'
+    Write-Host "Characters: $($text.Length) / $maxInstructionsCharacters"
     Write-Host "Source: $resolvedPath"
     return
 }
@@ -41,6 +46,7 @@ if ($ValidateOnly) {
 Set-Clipboard -Value $text
 
 Write-Host 'CUSTOM GPT INSTRUCTIONS COPIED'
+Write-Host "Characters: $($text.Length) / $maxInstructionsCharacters"
 Write-Host "Source: $resolvedPath"
 Write-Host 'Encoding: UTF-8'
 Write-Host 'Paste this into the GPT Builder main Instructions field (replace the entire existing content).'
