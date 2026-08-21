@@ -83,5 +83,18 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.13'}
-      - run: python -m pip install pyyaml openapi-spec-validator
-      - run: openapi-spec-validator openapi/custom-gpt-action.openapi.yaml
+      - run: python -m pip install openapi-spec-validator
+      - name: Generate canonical v2-only Action contract
+        run: python tools/generate_action_openapi.py --server-url https://theme-compare.ci.example.co.jp --output /tmp/action.json
+      - run: openapi-spec-validator /tmp/action.json
+      - name: Reject legacy paths and verify required request bodies
+        run: |
+          python - <<'PY'
+          import json
+          doc=json.load(open('/tmp/action.json'))
+          assert not any(path.startswith('/v1/') for path in doc['paths'])
+          for path in ['/v2/sessions','/v2/sessions/{session_id}/phases','/v2/sessions/{session_id}/updates']:
+              op=doc['paths'][path]['post']
+              assert op['requestBody']['required'] is True
+              assert any(p.get('name')=='Idempotency-Key' and p.get('required') for p in op.get('parameters',[]))
+          PY
