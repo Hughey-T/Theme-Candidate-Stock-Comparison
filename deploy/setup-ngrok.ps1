@@ -136,18 +136,7 @@ Write-Host 'Saved THEME_COMPARE_PUBLIC_URL as a user environment variable.'
 
 if ($InstallStartupTask) {
     Write-Host '=== 5. Install current-user startup ==='
-    $taskName = 'ThemeCandidateStockComparison-ngrok'
-    $escapedExe = $ngrok.Source.Replace('"', '""')
-    $taskCommand = '"' + $escapedExe + '" http 8000'
-    $taskOutput = & schtasks.exe /Create /F /SC ONLOGON /TN $taskName /TR $taskCommand 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        $taskOutput | Out-Host
-        Write-Host "Startup task installed: $taskName"
-    }
-    else {
-        Write-Warning 'Windows Task Scheduler registration was denied or unavailable. Falling back to the current-user Startup folder; administrator elevation is not required for this fallback.'
-        Install-NgrokStartupShortcut -NgrokPath $ngrok.Source
-    }
+    Install-NgrokStartupShortcut -NgrokPath $ngrok.Source
 }
 
 Write-Host '=== 6. Verify public health ==='
