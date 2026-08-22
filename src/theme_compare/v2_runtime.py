@@ -401,11 +401,7 @@ class V2RuntimeService:
             candidate_b = record.get("candidate_b")
             if not isinstance(candidate_a, str) or not isinstance(candidate_b, str):
                 raise SemanticError("pairwise candidate_a and candidate_b are required strings")
-            if (
-                candidate_a == candidate_b
-                or candidate_a not in deep
-                or candidate_b not in deep
-            ):
+            if candidate_a == candidate_b or candidate_a not in deep or candidate_b not in deep:
                 raise SemanticError("invalid pairwise candidate identity")
             actual_rows.append(tuple(sorted((candidate_a, candidate_b))))
 
