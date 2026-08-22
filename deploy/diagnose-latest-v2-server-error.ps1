@@ -19,10 +19,36 @@ Write-Host '=== Persisted v2 progress ==='
 
 Write-Host ''
 Write-Host "=== Sanitized server exception log (since $Since) ==="
-$raw = (& docker logs --since $Since --tail 500 $ContainerName 2>&1 | Out-String)
-if ($LASTEXITCODE -ne 0) {
+
+# Docker writes normal container logs to stderr. In Windows PowerShell 5.1, redirecting
+# native stderr through the PowerShell pipeline can turn ordinary log lines into
+# NativeCommandError records when ErrorActionPreference=Stop. Capture both streams
+# directly from docker.exe instead so INFO lines cannot abort this diagnostic.
+$startInfo = New-Object System.Diagnostics.ProcessStartInfo
+$startInfo.FileName = $dockerCommand.Source
+$startInfo.Arguments = "logs --since `"$Since`" --tail 500 `"$ContainerName`""
+$startInfo.UseShellExecute = $false
+$startInfo.RedirectStandardOutput = $true
+$startInfo.RedirectStandardError = $true
+$startInfo.CreateNoWindow = $true
+
+$process = New-Object System.Diagnostics.Process
+$process.StartInfo = $startInfo
+if (-not $process.Start()) {
+    throw 'Could not start docker logs.'
+}
+$stdoutTask = $process.StandardOutput.ReadToEndAsync()
+$stderrTask = $process.StandardError.ReadToEndAsync()
+$process.WaitForExit()
+$stdout = $stdoutTask.Result
+$stderr = $stderrTask.Result
+$exitCode = $process.ExitCode
+$process.Dispose()
+
+if ($exitCode -ne 0) {
     throw 'Could not read container logs.'
 }
+$raw = $stdout + [Environment]::NewLine + $stderr
 
 # Never display credentials or idempotency-key values if they appear in a log line.
 $sanitized = $raw
