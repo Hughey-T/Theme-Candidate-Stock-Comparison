@@ -361,10 +361,11 @@ class V2RuntimeService:
                 raise SemanticError("independent AI ranking is immutable")
 
         rankings = payload.get("rankings")
-        if not isinstance(rankings, dict) or set(rankings) != {
+        required_ranking_keys = {
             "evidence_only_mechanical",
             "scenario_derived",
-        }:
+        }
+        if not isinstance(rankings, dict) or set(rankings) != required_ranking_keys:
             raise SemanticError("mechanical and scenario rankings must remain separate")
         mechanical = rankings.get("evidence_only_mechanical")
         scenario = rankings.get("scenario_derived")
@@ -373,11 +374,11 @@ class V2RuntimeService:
         inputs = mechanical.get("inputs", [])
         if not isinstance(inputs, list):
             raise SemanticError("mechanical ranking inputs must be an array")
+        allowed_mechanical_classifications = {"FACTS", "EXTERNAL_ESTIMATES"}
         for item in inputs:
-            if not isinstance(item, dict) or item.get("classification") not in {
-                "FACTS",
-                "EXTERNAL_ESTIMATES",
-            }:
+            if not isinstance(item, dict):
+                raise SemanticError("evidence-only mechanical input contamination")
+            if item.get("classification") not in allowed_mechanical_classifications:
                 raise SemanticError("evidence-only mechanical input contamination")
 
         deep = payload.get("deep_candidates")
@@ -400,7 +401,11 @@ class V2RuntimeService:
             candidate_b = record.get("candidate_b")
             if not isinstance(candidate_a, str) or not isinstance(candidate_b, str):
                 raise SemanticError("pairwise candidate_a and candidate_b are required strings")
-            if candidate_a == candidate_b or candidate_a not in deep or candidate_b not in deep:
+            if (
+                candidate_a == candidate_b
+                or candidate_a not in deep
+                or candidate_b not in deep
+            ):
                 raise SemanticError("invalid pairwise candidate identity")
             actual_rows.append(tuple(sorted((candidate_a, candidate_b))))
 
