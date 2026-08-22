@@ -403,7 +403,12 @@ class V2RuntimeService:
                 raise SemanticError("pairwise candidate_a and candidate_b are required strings")
             if candidate_a == candidate_b or candidate_a not in deep or candidate_b not in deep:
                 raise SemanticError("invalid pairwise candidate identity")
-            actual_rows.append(tuple(sorted((candidate_a, candidate_b))))
+            normalized_pair = (
+                (candidate_a, candidate_b)
+                if candidate_a <= candidate_b
+                else (candidate_b, candidate_a)
+            )
+            actual_rows.append(normalized_pair)
 
         expected = {tuple(sorted(pair)) for pair in combinations(deep, 2)}
         actual = set(actual_rows)
