@@ -1,7 +1,7 @@
 [CmdletBinding()]
 param(
     [string]$InspectorUrl = 'http://127.0.0.1:4040/api/requests/http',
-    [int]$Limit = 50
+    [int]$Limit = 100
 )
 
 $ErrorActionPreference = 'Stop'
@@ -46,6 +46,14 @@ function Get-SafePath {
     return ($uri -split '\?', 2)[0]
 }
 
+function Get-ActionKind {
+    param([string]$Path)
+    if ($Path -eq '/theme-compare/v2/sessions') { return 'create' }
+    if ($Path -eq '/theme-compare/v2/session-create-result') { return 'recovery' }
+    if ($Path -match '^/theme-compare/v2/sessions/s_[0-9a-f]{32}/phases$') { return 'phase-submit' }
+    return $null
+}
+
 try {
     $result = Invoke-RestMethod -Uri ($InspectorUrl + '?limit=' + $Limit) -TimeoutSec 5
 }
@@ -59,11 +67,11 @@ if ($requests.Count -eq 0) {
     exit 2
 }
 
-$targetPaths = @('/theme-compare/v2/sessions', '/theme-compare/v2/session-create-result')
 $rows = @()
 foreach ($item in $requests) {
     $path = Get-SafePath $item
-    if ($targetPaths -notcontains $path) { continue }
+    $kind = Get-ActionKind $path
+    if ($null -eq $kind) { continue }
 
     $method = if ($null -ne $item.request.method) { [string]$item.request.method } else { '?' }
     $status = Get-StatusCode $item.response
@@ -79,7 +87,6 @@ foreach ($item in $requests) {
         $responseRawLength = ([Text.Encoding]::UTF8.GetByteCount([string]$item.response.raw))
     }
 
-    $kind = if ($path -eq '/theme-compare/v2/sessions') { 'create' } else { 'recovery' }
     $rows += [pscustomobject]@{
         Start = [string]$item.start
         Kind = $kind
@@ -95,12 +102,12 @@ foreach ($item in $requests) {
 }
 
 if ($rows.Count -eq 0) {
-    Write-Host 'NGROK ACTION RESPONSE DIAGNOSTIC: no recent Theme create/recovery requests were found in the local ngrok inspector.'
-    Write-Host 'No request headers, request bodies, query values, API keys, or idempotency keys were printed.'
+    Write-Host 'NGROK ACTION RESPONSE DIAGNOSTIC: no recent Theme create/recovery/phase-submit requests were found in the local ngrok inspector.'
+    Write-Host 'No request headers, request bodies, query values, API keys, idempotency keys, or session IDs were printed.'
     exit 2
 }
 
-$recent = @($rows | Sort-Object Start | Select-Object -Last 10)
+$recent = @($rows | Sort-Object Start | Select-Object -Last 20)
 Write-Host '=== ngrok-inspected Theme Action responses ==='
 foreach ($row in $recent) {
     Write-Host ('  ' + $row.Start + '  ' + $row.Kind + '  ' + $row.Method + '  HTTP ' + $row.Status)
@@ -112,6 +119,29 @@ foreach ($row in $recent) {
     Write-Host ('    Inspector raw response bytes: ' + $(if ($null -ne $row.RawBytes) { $row.RawBytes } else { '<unavailable>' }))
 }
 
+$latestSubmit = @($recent | Where-Object Kind -eq 'phase-submit' | Select-Object -Last 1)
+if ($latestSubmit.Count -gt 0) {
+    $status = $latestSubmit[0].Status
+    if ($status -eq 200) {
+        Write-Host 'DIAGNOSIS: ngrok observed HTTP 200 for the latest phase submission.'
+        Write-Host 'If ChatGPT reported Internal Server Error for that call, the failure is downstream of the ngrok response boundary.'
+        exit 0
+    }
+    if ($status -eq 422) {
+        Write-Host 'DIAGNOSIS: ngrok observed HTTP 422 for the latest phase submission.'
+        Write-Host 'This is a structured runtime validation failure, not an Internal Server Error.'
+        exit 11
+    }
+    if ($status -eq 500) {
+        Write-Host 'DIAGNOSIS: ngrok observed HTTP 500 for the latest phase submission.'
+        Write-Host 'Inspect sanitized container logs to identify the server-side exception.'
+        exit 12
+    }
+    Write-Host ('DIAGNOSIS: latest phase submission reached ngrok with HTTP ' + $status + '.')
+    Write-Host 'Use the safe response metadata above before changing runtime behavior.'
+    exit 13
+}
+
 $latestCreate = @($recent | Where-Object Kind -eq 'create' | Select-Object -Last 1)
 $latestRecovery = @($recent | Where-Object Kind -eq 'recovery' | Select-Object -Last 1)
 if ($latestCreate.Count -gt 0 -and $latestRecovery.Count -gt 0 -and
@@ -121,6 +151,6 @@ if ($latestCreate.Count -gt 0 -and $latestRecovery.Count -gt 0 -and
     exit 0
 }
 
-Write-Host 'DIAGNOSIS: at least one inspected create/recovery response was not HTTP 200 or was unavailable.'
+Write-Host 'DIAGNOSIS: no phase submission was observed in the selected inspector window.'
 Write-Host 'Use the safe response metadata above before changing runtime behavior.'
 exit 10
