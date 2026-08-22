@@ -26,6 +26,7 @@ jobs:
         with: {python-version: '3.13'}
       - run: PIP_CONSTRAINT=constraints-dev.txt python -m pip install -e '.[dev]'
       - run: ruff check .
+      - run: ruff format --diff src/theme_compare/v2_runtime.py
       - run: ruff format --check .
       - run: mypy src
       - name: Schema samples and representative mutation suite
