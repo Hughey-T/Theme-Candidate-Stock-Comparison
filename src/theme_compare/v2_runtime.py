@@ -200,8 +200,11 @@ class V2RuntimeService:
                 "scenario_derived",
             ]
             requirements["mechanical_input_classifications"] = ["FACTS", "EXTERNAL_ESTIMATES"]
+            requirements["pairwise_record_fields"] = ["candidate_a", "candidate_b"]
             requirements["pairwise_requirement"] = (
-                "exactly one unordered pair record for every pair in deep_candidates"
+                "pairwise must be an array of objects; every record must contain string fields "
+                "candidate_a and candidate_b, and there must be exactly one unordered record for "
+                "every distinct pair in deep_candidates"
             )
         if phase == final_phase:
             requirements["required_payload_keys"] = [
@@ -351,22 +354,60 @@ class V2RuntimeService:
         state["candidate_sets"][name] = candidate_set_id(selected) if selected else "EMPTY"
 
     def _validate_phase11(self, state: dict[str, Any], payload: dict[str, Any]) -> None:
+        if not isinstance(payload, dict):
+            raise SemanticError("reconciliation payload must be an object")
         if "independent_ai_ranking" in payload:
             if self._hash(payload["independent_ai_ranking"]) != state["independent_ai_hash"]:
                 raise SemanticError("independent AI ranking is immutable")
-        rankings = payload.get("rankings", {})
-        if set(rankings) != {"evidence_only_mechanical", "scenario_derived"}:
+
+        rankings = payload.get("rankings")
+        if not isinstance(rankings, dict) or set(rankings) != {
+            "evidence_only_mechanical",
+            "scenario_derived",
+        }:
             raise SemanticError("mechanical and scenario rankings must remain separate")
-        for item in rankings["evidence_only_mechanical"].get("inputs", []):
-            if item.get("classification") not in {"FACTS", "EXTERNAL_ESTIMATES"}:
+        mechanical = rankings.get("evidence_only_mechanical")
+        scenario = rankings.get("scenario_derived")
+        if not isinstance(mechanical, dict) or not isinstance(scenario, dict):
+            raise SemanticError("ranking entries must be objects")
+        inputs = mechanical.get("inputs", [])
+        if not isinstance(inputs, list):
+            raise SemanticError("mechanical ranking inputs must be an array")
+        for item in inputs:
+            if not isinstance(item, dict) or item.get("classification") not in {
+                "FACTS",
+                "EXTERNAL_ESTIMATES",
+            }:
                 raise SemanticError("evidence-only mechanical input contamination")
-        deep = payload.get("deep_candidates", [])
+
+        deep = payload.get("deep_candidates")
+        if (
+            not isinstance(deep, list)
+            or any(not isinstance(candidate, str) for candidate in deep)
+            or len(deep) != len(set(deep))
+            or not set(deep) <= set(state["blind_order"])
+        ):
+            raise SemanticError("invalid deep_candidates")
+
+        pairwise = payload.get("pairwise")
+        if not isinstance(pairwise, list):
+            raise SemanticError("pairwise must be an array")
+        actual_rows: list[tuple[str, str]] = []
+        for record in pairwise:
+            if not isinstance(record, dict):
+                raise SemanticError("each pairwise record must be an object")
+            candidate_a = record.get("candidate_a")
+            candidate_b = record.get("candidate_b")
+            if not isinstance(candidate_a, str) or not isinstance(candidate_b, str):
+                raise SemanticError("pairwise candidate_a and candidate_b are required strings")
+            if candidate_a == candidate_b or candidate_a not in deep or candidate_b not in deep:
+                raise SemanticError("invalid pairwise candidate identity")
+            actual_rows.append(tuple(sorted((candidate_a, candidate_b))))
+
         expected = {tuple(sorted(pair)) for pair in combinations(deep, 2)}
-        actual = {
-            tuple(sorted((p["candidate_a"], p["candidate_b"]))) for p in payload.get("pairwise", [])
-        }
-        if expected != actual:
-            raise SemanticError("incomplete unordered pair coverage")
+        actual = set(actual_rows)
+        if len(actual_rows) != len(actual) or expected != actual:
+            raise SemanticError("incomplete or duplicate unordered pair coverage")
 
     def _finalize(self, state: dict[str, Any], payload: dict[str, Any]) -> None:
         if not state["reconciliation_disclosed"]:
