@@ -119,6 +119,11 @@ def test_refresh_gpt_supports_config_only_promotion_and_safe_secret_copy() -> No
 
     required = [
         "[switch]$ConfigOnly",
+        "ngrok-skip-browser-warning",
+        "ThemeCompareVerifier/1.0",
+        "$health.service -ne 'ok'",
+        "$health.storage -ne 'ok'",
+        "$health.build_id",
         "python $generator --server-url $PublicUrl --output $schemaPath",
         "printenv THEME_COMPARE_API_KEY",
         "Set-Clipboard -Value $key",
