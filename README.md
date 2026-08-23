@@ -1,6 +1,6 @@
 # Theme Candidate Stock Comparison Runtime
 
-市場テーマ分析と個別株完全分析の間に置く、**Custom GPTが生成したPhase成果物を検証・保存するruntime**です。本リポジトリ自身は市場データ取得や分析文章の生成を行いません。Custom GPTがPhase-specific contractに従ってFACTS、COMPANY_CLAIMS、EXTERNAL_ESTIMATES、JUDGMENTSとpayloadを生成し、runtimeはSchema、identity、時系列、比較可能性、シナリオ計算、ranking、選抜、publication integrityを保証します。
+市場テーマ分析と個別株完全分析の間に置く、**Custom GPTが生成したPhase成果物を検証・保存するruntime**です。本リポジトリ自身は市場データ取得や分析文章の生成を行いません。Custom GPTがPhase-specific contractに従ってFACTS、COMPANY_CLAIMS、EXTERNAL_ESTIMATES、AI_ASSUMPTIONS、JUDGMENTS、UNRESOLVEDとpayloadを生成し、runtimeはSchema、identity、時系列、比較可能性、ranking、選抜、publication integrityを保証します。
 
 ## Operation and boundaries
 
@@ -8,33 +8,23 @@ Preferred contract **2.0.0** is Initial 12 / Update 4 with exact `次` / `更新
 
 Candidate sets have separate identities for the ≤12 initial, ≤8 eligible, ≤5 deep, and ≤2/empty final sets. Multiple versioned horizons are first-class. Individual stock analysis receives a non-persuasive blind handoff first; reconciliation is released only after acknowledgement of independent analysis. This is not automated trading and has no broker, order, concrete entry-price, position-sizing, or stop-loss integration.
 
-Contract 1.0 Initial 10 / Update 2 endpoints remain a legacy completion/read path. They are not silently migrated. See [the audit](docs/current-state-audit.md), [2.0 architecture](docs/final-architecture-v2.md), and [migration rules](docs/current-state-audit.md).
+Contract 1.0 endpoints remain a legacy completion/read path inside the runtime only. New Custom GPT integrations expose **v2 only** and never silently migrate v1 state.
 
 ## Safety mechanisms
 
 * legal-security identity全体からorder-independent candidate-set IDを再計算
-* 共通THEME_BEAR/BASE/BULLからTSR、annualized return、downside/permanent-loss確率を再計算
-* applicability、data state、comparability、dependency root、正規化scoreから5 rankingを再導出
-* hard gateを加点で相殺せず、cash/investment benchmarkとリスク条件からoverall `SELECTION`/`NO_SELECTION`を分離
-* 12 Phaseの内部までclosedなpackage-resource Schemaと必須phase semantic dispatcher
-* Phase 2 canonical detail setに対するPhase 3～10の完全candidate coverageとpair/metric matrix検証
-* generation evidence registryによる分類・ID・cutoff・全payload referenceの整合性検証
-* complete generationから何度でも更新し、generation固有のcanonical candidate setとas-of/cutoffを履歴保持
-* Phase 6/8/9・evidence・confidenceをhandoffへ実データ投影し、validated update context changesだけを重ねてhandoff chainをatomic supersede
-* source cutoffをUTC instantで厳密単調増加させ、同一instantのoffset違いと逆行を拒否
+* evidence-only / scenario-derived / independent AI / integrated selectionを別objectとして保持
+* hard gateを加点で相殺せず、条件未達では正式に`NO_SELECTION`
+* generation evidence registryによる分類・ID・cutoff・payload reference整合性検証
+* source cutoffをUTC instantで厳密単調増加させ、逆行やfuture evidenceを拒否
 * NaN/Infinity、duplicate JSON key、不正UTF-8を拒否するstrict runtime decode
-* base64のclosed JSON partsをtemporary directoryで生成・復元検証してatomic rename
-* remote integrity verification後だけlatestを更新
+* atomic persistenceとreadback verification
+* Custom GPTではv2 POSTの必須query parameter `idempotency_key` により同一要求の安全な再送を保証。runtimeは既存クライアント互換のため`Idempotency-Key` headerも受理
+* healthでcontract/API profile/build/schema fingerprintを公開し、接続前に契約不一致を検出
 
-Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Runtimeは`importlib.resources`で読み、source checkout、editable install、wheel installの経路差を作りません。Windowsを含めsymlinkを必要とせず、generatorとtestsもpackage resource pathを直接使用します。
-
-Handoff v2はupdate operationとsnapshot data stateを分離し、confidence、catalyst、risk、invalidationをclosed typed objectで保存します。Candidate別assumption/evidenceは個別mapとして保存し、candidate changeの入力順に依存しない決定的なhandoffを生成します。
-
-Initial evidenceはsourceの`candidate_id`によりglobalとcandidate-boundへpartitionし、global evidenceやglobal judgment assumptionsを全candidateへ複製しません。State loadはactive/supersededを含む全handoffのpartitionをgeneration evidence registryと再照合します。
+Schemaの正本はwheelに同梱される`src/theme_compare/schemas`です。Custom GPT Actionの正本は `tools/generate_action_openapi.py` から生成するv2-only OpenAPIです。
 
 ## Development
-
-Tool versions are pinned in `constraints-dev.txt`; dependency ranges in `pyproject.toml` prevent accidental major-version drift. Update pins only with a green Python 3.11–3.13 matrix.
 
 ```bash
 PIP_CONSTRAINT=constraints-dev.txt python -m pip install -e '.[dev]'
@@ -44,25 +34,89 @@ mypy src
 pytest -q
 ```
 
-本runtimeは投資助言、具体的買値、分割購入、損切り、注文執行を提供しません。
+## Production topology
 
-## 実際の利用方法（private runtime）
+複数のローカルシステムで1つの固定ngrok Development Domainを共有するため、production ingressは共有 **Local AI Gateway** を使用します。
 
-1. `.env.example`から長いBearer secretと永続volumeを設定し、`docker build -t theme-compare .`でbuildします。
-2. HTTPS reverse proxyの背後でcontainerを起動し、`openapi/custom-gpt-action.openapi.yaml`のserver URLを置換してCustom GPT Actionsへimportします。
-3. Action認証をBearer API keyに設定し、`docs/custom-gpt-production-instructions.md`をGPT Instructionsへ追加します。
-4. 上流handoffから`POST /v1/sessions`を1回実行します。以後「次」はnext-contract取得→Custom GPTによる単一Phase調査→artifact submissionだけを行い、Initial完了後の「更新」は新generationを開始します。
+```text
+Custom GPT Action
+  ↓
+https://<fixed-ngrok-domain>/theme-compare
+  ↓
+ngrok
+  ↓
+Local AI Gateway (Caddy, 127.0.0.1:8080)
+  ↓  /theme-compare prefixを除去
+Theme Comparison container :8000
+  ↓
+persistent theme-compare-data volume
+```
 
-serviceは`GET /health`以外を認証し、stateを`THEME_COMPARE_STORAGE_ROOT`へsession単位でatomic保存します。endpoint、backup、secret rotation、Preview試験、更新手順の詳細は[`deploy/README.md`](deploy/README.md)を参照してください。
+Gateway本体・ngrok起動・route registryは `AI-Development-Orchestrator` repository側で管理します。Theme Comparisonはngrokプロセスを独自に起動しません。Gatewayのdomain root `/` は既存AI Development Orchestrator用に維持されます。
+
+## Production usage
+
+1. `.env.example`から長いBearer secretと永続volumeを設定します。
+2. Docker Linux containerとしてruntimeを起動します。
+3. AI Development Orchestrator repositoryの `deploy/setup-gateway.ps1` で共有Gatewayへ `theme-compare` containerを接続します。
+4. ngrokが共有Gatewayのport `8080` を公開した後、このrepositoryで次を実行します。
+
+```powershell
+.\deploy\setup-ngrok.ps1
+```
+
+このスクリプトはTheme専用ngrokを開始しません。ローカルGatewayの `/theme-compare/health`、中央ngrok tunnelのupstreamがport 8080であること、公開 `/theme-compare/health` のv2 fingerprintを確認し、次の形式で `THEME_COMPARE_PUBLIC_URL` を設定します。
+
+```text
+https://<fixed-ngrok-domain>/theme-compare
+```
+
+過去に作成されたTheme専用ngrok Startup shortcut/launcherがあれば削除します。旧 `-InstallStartupTask` switchは互換性のため受理しますが、新しいTheme専用自動起動は作りません。
+
+5. 固定Gateway URLからv2-only Action Schemaを生成します。
+
+```powershell
+python .\tools\generate_action_openapi.py `
+  --server-url $env:THEME_COMPARE_PUBLIC_URL `
+  --output .\openapi\custom-gpt-action.v2.openapi.json
+```
+
+Generatorは `https://host/theme-compare` のような安全なpath prefixをOpenAPI `servers.url` として扱い、API path自体は既存の `/v2/*` と `/health` のまま維持します。
+
+6. 生成ファイルをCustom GPT Actionsへimportし、Bearer API keyを設定します。
+7. `docs/custom-gpt-production-instructions.md`をGPT Instructionsへ反映します。
+8. `$env:THEME_COMPARE_API_KEY` を設定して `./deploy/verify-production.ps1` を実行し、`READY: Theme Candidate Stock Comparison v2` を確認します。
+
+## Safe Windows runtime update
+
+既存production containerの更新は個別Docker操作ではなく次を使います。
+
+```powershell
+.\deploy\update-production.ps1
+```
+
+このスクリプトはclean working tree、既存container、`127.0.0.1:8000` binding、persistent mountsを確認してからcandidate imageをbuildします。build成功後にのみ旧containerを停止し、旧containerと旧imageをtimestamp付きrollback対象として保持したまま、同じmount・effective environment・restart policyで新containerを起動します。新runtimeがv2 health contractを満たさない場合は旧containerへのrollbackを試みます。volume削除やpruneは行いません。
+
+一度 `local-ai-gateway` networkへ接続されたproduction containerは、以後のruntime更新でも `theme-compare` alias付きnetwork membershipを自動で復元します。
+
+`GET /health`以外は認証されます。Custom GPT Actionのv2 session create / phase submit / update startでは必須query parameter `idempotency_key` を使用し、runtimeは後方互換としてqueryまたは`Idempotency-Key` headerのいずれかを受理します。同じkey+payloadの再送は最初の保存済み結果を返します。同じkeyを別payloadへ再利用すると拒否されます。
+
+詳細なruntime更新、共有Gateway ingress、backup、secret rotation、OpenAPI生成、smoke test、rollback手順は [`deploy/README.md`](deploy/README.md) を参照してください。
 
 ### Windows / Docker Desktop
 
-Production runtimeはLinux containerを正式サポート範囲とし、Windowsでは`fcntl`へ依存するPython processを直接起動せずDocker Desktopを使用します。PowerShell例:
+Production runtimeはLinux containerを正式サポート範囲とし、Windowsではnative Python runtimeを直接起動せずDocker DesktopのLinux containers modeを使用します。
+
+初回起動例:
 
 ```powershell
 Copy-Item .env.example .env
-# .envのTHEME_COMPARE_API_KEYを十分長いrandom secretへ変更
 Docker build -t theme-compare:latest .
-Docker run -d --name theme-compare --env-file .env -p 127.0.0.1:8000:8000 -v theme-compare-data:/data/sessions theme-compare:latest
+Docker run -d --name theme-compare --restart unless-stopped --env-file .env `
+  -p 127.0.0.1:8000:8000 -v theme-compare-data:/data/sessions theme-compare:latest
 Invoke-RestMethod http://127.0.0.1:8000/health
 ```
+
+その後、共有Gateway bootstrapを実行します。以後のコード更新は `deploy/update-production.ps1` を使用してください。
+
+本runtimeは投資助言、具体的買値、分割購入、損切り、注文執行、自動売買を提供しません。
