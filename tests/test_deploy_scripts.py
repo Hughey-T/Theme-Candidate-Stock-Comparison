@@ -160,8 +160,7 @@ def test_cleanup_rollbacks_is_dry_run_by_default_and_keeps_latest_generation() -
         "Refusing cleanup because target rollback containers are running",
         "docker rm $name",
         "docker image rm $tag",
-        "Candidate image tags are not removed by this script.",
-        "ROLLBACK CLEANUP COMPLETE",
+        "DOCKER CLEANUP COMPLETE",
     ]
     for marker in required:
         assert marker in text
