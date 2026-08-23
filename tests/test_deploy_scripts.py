@@ -4,6 +4,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 UPDATE_SCRIPT = ROOT / "deploy" / "update-production.ps1"
 NGROK_SCRIPT = ROOT / "deploy" / "setup-ngrok.ps1"
+REFRESH_GPT_SCRIPT = ROOT / "deploy" / "refresh-custom-gpt-production.ps1"
 
 
 def test_update_script_has_required_safety_guards() -> None:
@@ -111,3 +112,30 @@ def test_ngrok_public_health_requires_v2_fingerprint() -> None:
     ]
     for marker in required:
         assert marker in text
+
+
+def test_refresh_gpt_supports_config_only_promotion_and_safe_secret_copy() -> None:
+    text = REFRESH_GPT_SCRIPT.read_text(encoding="utf-8")
+
+    required = [
+        "[switch]$ConfigOnly",
+        "python $generator --server-url $PublicUrl --output $schemaPath",
+        "printenv THEME_COMPARE_API_KEY",
+        "Set-Clipboard -Value $key",
+        "Remove-Variable key",
+        "API Key / Bearer",
+        "Web Search = ON",
+        "Start a NEW conversation",
+        "Keep rollback container/image artifacts",
+        "CUSTOM GPT PRODUCTION PROMOTION READY",
+    ]
+    for marker in required:
+        assert marker in text
+
+    forbidden = [
+        "Write-Host $key",
+        "Write-Output $key",
+        "Write-Verbose $key",
+    ]
+    for marker in forbidden:
+        assert marker not in text
