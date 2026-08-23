@@ -11,19 +11,28 @@ $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $generator = Join-Path $repoRoot 'tools\generate_action_openapi.py'
 $schemaPath = Join-Path $repoRoot 'openapi\custom-gpt-action.v2.openapi.json'
 $utf8 = New-Object System.Text.UTF8Encoding($false, $true)
+$PublicUrl = $PublicUrl.TrimEnd('/')
 
 Push-Location $repoRoot
 try {
     if ($ConfigOnly) {
         Write-Host '=== 1. Verify current public production runtime ==='
-        $health = Invoke-RestMethod -Uri "$PublicUrl/health" -Method Get -TimeoutSec 20
+        $ngrokHeaders = @{ 'ngrok-skip-browser-warning' = '1' }
+        $health = Invoke-RestMethod `
+            -Uri "$PublicUrl/health" `
+            -Headers $ngrokHeaders `
+            -UserAgent 'ThemeCompareVerifier/1.0' `
+            -TimeoutSec 20
+        if ($health.service -ne 'ok' -or $health.storage -ne 'ok' -or -not $health.ready) {
+            throw 'Public production runtime is not ready.'
+        }
         if ($health.contract_version -ne '2.0.0' -or $health.api_profile -ne 'custom-gpt-v2') {
             throw 'Public production runtime does not expose the expected v2 Custom GPT profile.'
         }
         if ([string]::IsNullOrWhiteSpace([string]$health.schema_sha256)) {
             throw 'Public production runtime did not expose a schema fingerprint.'
         }
-        Write-Host "Runtime ready: contract=$($health.contract_version); build=$($health.build)"
+        Write-Host "Runtime ready: contract=$($health.contract_version); build=$($health.build_id)"
     }
     else {
         Write-Host '=== 1. Update production runtime safely ==='
