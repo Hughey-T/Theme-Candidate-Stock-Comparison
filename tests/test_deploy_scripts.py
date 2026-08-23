@@ -5,6 +5,7 @@ ROOT = Path(__file__).resolve().parents[1]
 UPDATE_SCRIPT = ROOT / "deploy" / "update-production.ps1"
 NGROK_SCRIPT = ROOT / "deploy" / "setup-ngrok.ps1"
 REFRESH_GPT_SCRIPT = ROOT / "deploy" / "refresh-custom-gpt-production.ps1"
+CLEANUP_ROLLBACKS_SCRIPT = ROOT / "deploy" / "cleanup-old-rollbacks.ps1"
 
 
 def test_update_script_has_required_safety_guards() -> None:
@@ -144,3 +145,42 @@ def test_refresh_gpt_supports_config_only_promotion_and_safe_secret_copy() -> No
     ]
     for marker in forbidden:
         assert marker not in text
+
+
+def test_cleanup_rollbacks_is_dry_run_by_default_and_keeps_latest_generation() -> None:
+    text = CLEANUP_ROLLBACKS_SCRIPT.read_text(encoding="utf-8")
+
+    required = [
+        "[int]$Keep = 1",
+        "[switch]$Apply",
+        "Sort-Object -Descending -Unique",
+        "Select-Object -First $Keep",
+        "Select-Object -Skip $Keep",
+        "DRY RUN ONLY. No Docker object was deleted.",
+        "Refusing cleanup because target rollback containers are running",
+        "docker rm $name",
+        "docker image rm $tag",
+        "Candidate image tags are not removed by this script.",
+        "ROLLBACK CLEANUP COMPLETE",
+    ]
+    for marker in required:
+        assert marker in text
+
+
+def test_cleanup_rollbacks_never_touches_volumes_networks_or_current_container() -> None:
+    text = CLEANUP_ROLLBACKS_SCRIPT.read_text(encoding="utf-8").lower()
+
+    forbidden = [
+        "docker volume rm",
+        "docker volume prune",
+        "docker network rm",
+        "docker network prune",
+        "docker system prune",
+        "docker rm theme-compare ",
+        "docker rm -f theme-compare",
+    ]
+    for marker in forbidden:
+        assert marker not in text
+
+    assert "theme-compare-data" in text
+    assert "local-ai-gateway" in text
