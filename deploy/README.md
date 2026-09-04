@@ -66,9 +66,9 @@ On success it prints:
 ## Orchestrator-owned dispatch, target-owned deployment
 
 `.github/workflows/deploy-production.yml` is the repository-owned Stage 5 wrapper
-for the same updater. It runs only by `workflow_dispatch` on the dedicated
-`theme-production` Windows runner, accepts the Orchestrator's opaque correlation
-ID and an exact 40-character `commit_sha`, and refuses to deploy unless that SHA
+for the same updater. It runs automatically for `main` pushes on the dedicated
+`theme-production` Windows runner and also permits manual dispatch with an optional
+exact 40-character `commit_sha`. It refuses to deploy unless that SHA
 is both checked out and still the current `main` commit. GitHub serializes
 production updates without cancelling an update already in progress.
 
@@ -77,7 +77,7 @@ Configure the Orchestrator with:
 ```env
 GITHUB_WORKFLOW_ALLOWLIST=Hughey-T/Theme-Candidate-Stock-Comparison:deploy-production.yml
 GITHUB_WORKFLOW_INPUT_SCHEMAS={"Hughey-T/Theme-Candidate-Stock-Comparison:deploy-production.yml":{"commit_sha":{"required":true,"pattern":"^[0-9a-f]{40}$","maxLength":40}}}
-DEPLOYMENT_TARGETS={"Hughey-T/Theme-Candidate-Stock-Comparison":{"workflow":"deploy-production.yml","environment":"production"}}
+DEPLOYMENT_TARGETS={"Hughey-T/Theme-Candidate-Stock-Comparison":{"workflow":"deploy-production.yml","environment":"production","mode":"auto","event":"push"}}
 ```
 
 The runner holds no deployment secret: `update-production.ps1` reconstructs the
