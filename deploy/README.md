@@ -63,6 +63,29 @@ On success it prints:
 
 `RUNTIME READY: Theme Candidate Stock Comparison v2`
 
+## Orchestrator-owned dispatch, target-owned deployment
+
+`.github/workflows/deploy-production.yml` is the repository-owned Stage 5 wrapper
+for the same updater. It runs only by `workflow_dispatch` on the dedicated
+`theme-production` Windows runner, accepts the Orchestrator's opaque correlation
+ID and an exact 40-character `commit_sha`, and refuses to deploy unless that SHA
+is both checked out and still the current `main` commit. GitHub serializes
+production updates without cancelling an update already in progress.
+
+Configure the Orchestrator with:
+
+```env
+GITHUB_WORKFLOW_ALLOWLIST=Hughey-T/Theme-Candidate-Stock-Comparison:deploy-production.yml
+GITHUB_WORKFLOW_INPUT_SCHEMAS={"Hughey-T/Theme-Candidate-Stock-Comparison:deploy-production.yml":{"commit_sha":{"required":true,"pattern":"^[0-9a-f]{40}$","maxLength":40}}}
+DEPLOYMENT_TARGETS={"Hughey-T/Theme-Candidate-Stock-Comparison":{"workflow":"deploy-production.yml","environment":"production"}}
+```
+
+The runner holds no deployment secret: `update-production.ps1` reconstructs the
+existing container's effective environment in a temporary file and preserves its
+mounts, restart policy, loopback binding, and shared Gateway network. The workflow
+conclusion is Stage 5 deployment-process evidence. Independent public HTTP/API/
+browser acceptance remains the Stage 6 human-review gate.
+
 The stopped rollback container/image are intentionally retained after a successful update. Remove old rollback artifacts only as a separate deliberate maintenance operation after confirming the new runtime and persisted state; never remove the persistent data volume.
 
 ## Shared Local AI Gateway
