@@ -72,6 +72,8 @@ exact 40-character `commit_sha`. It refuses to deploy unless that SHA
 is both checked out and still the current `main` commit. GitHub serializes
 production updates without cancelling an update already in progress.
 
+Automatic production deployment tracks the exact commit SHA at the tip of `main`.
+
 Configure the Orchestrator with:
 
 ```env
