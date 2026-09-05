@@ -120,3 +120,6 @@ Invoke-RestMethod http://127.0.0.1:8000/health
 その後、共有Gateway bootstrapを実行します。以後のコード更新は `deploy/update-production.ps1` を使用してください。
 
 本runtimeは投資助言、具体的買値、分割購入、損切り、注文執行、自動売買を提供しません。
+
+## Orchestrator Stage 6 final autonomous E2E proof
+Orchestrator Stage 6 final autonomous E2E PASS on 2026-09-05.
