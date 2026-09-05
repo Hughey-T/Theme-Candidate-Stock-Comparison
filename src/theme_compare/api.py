@@ -21,6 +21,7 @@ from .v2_runtime import V2RuntimeService
 
 CONTRACT_VERSION = "2.0.0"
 API_PROFILE = "custom-gpt-v2"
+VERIFICATION_PROFILE = "stage6-e2e"
 
 
 def _schema_fingerprint() -> str:
@@ -184,6 +185,7 @@ def create_app(storage: JsonVolumeStorage, api_key: str | None) -> FastAPI:
                 "ready": healthy,
                 "contract_version": CONTRACT_VERSION,
                 "api_profile": API_PROFILE,
+                "verification_profile": VERIFICATION_PROFILE,
                 "build_id": build_id,
                 "schema_sha256": schema_sha256,
             },

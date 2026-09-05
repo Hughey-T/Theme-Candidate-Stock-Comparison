@@ -12,9 +12,13 @@ def client(tmp_path, key="secret"):
     return TestClient(create_app(JsonVolumeStorage(tmp_path), key))
 
 
-def test_auth_create_get_contract_and_health(tmp_path):
+def test_auth_create_get_contract_and_health(tmp_path, monkeypatch):
+    monkeypatch.setenv("THEME_COMPARE_BUILD_ID", "deployed-main-commit")
     c = client(tmp_path)
-    assert c.get("/health").status_code == 200
+    health = c.get("/health")
+    assert health.status_code == 200
+    assert health.json()["verification_profile"] == "stage6-e2e"
+    assert health.json()["build_id"] == "deployed-main-commit"
     assert c.post("/v1/sessions", json=upstream()).status_code == 401
     made = c.post("/v1/sessions", headers={"Authorization": "Bearer secret"}, json=upstream())
     assert made.status_code == 201

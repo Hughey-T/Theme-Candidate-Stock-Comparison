@@ -304,6 +304,7 @@ def _generic_response_schema() -> dict[str, object]:
             "ready": {"type": "boolean"},
             "contract_version": {"type": "string"},
             "api_profile": {"type": "string"},
+            "verification_profile": {"type": "string"},
             "build_id": {"type": "string"},
             "schema_sha256": {"type": "string"},
             "error": {
